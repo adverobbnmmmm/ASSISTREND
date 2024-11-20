@@ -53,7 +53,7 @@ class AppBarwidget extends StatelessWidget {
                     image: AssetImage('assets/mailbox.png'),
                     color: Colors.white,
                   )),
-            )
+            ),
           ],
         ),
       ),

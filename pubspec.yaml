@@ -68,6 +68,7 @@ flutter:
    - assets/dashboard.png
    - assets/comment.png
    - assets/threewaysymbol.png
+   - assets/robot.png
  
 
   # An image asset can refer to one or more resolution-specific "variants", see
