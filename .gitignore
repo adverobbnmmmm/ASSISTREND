@@ -1,1 +1,26 @@
 
+# Flutter-specific files to ignore
+.flutter-plugins
+.flutter-plugins-dependencies
+.dart_tool/
+.packages
+.flutter-versions
+.metadata
+
+# Build outputs
+/build/
+/ios/Flutter/Flutter.framework
+/ios/Flutter/App.framework
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+
+# macOS
+.DS_Store
+/macos/Flutter/ephemeral/
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+
+# VS Code
+.vscode/
