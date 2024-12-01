@@ -38,7 +38,13 @@ dependencies:
   carousel_slider: ^5.0.0
   get: ^4.6.5
   fab_circular_menu: ^1.0.0
-
+  firebase_messaging: ^15.1.5
+  flutter_local_notifications: ^18.0.1
+  dio: ^5.7.0
+  firebase_core:
+  firebase_auth:
+  firebase_storage:
+  cloud_firestore:
 dev_dependencies:
   flutter_test:
     sdk: flutter

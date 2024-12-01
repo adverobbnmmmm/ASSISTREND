@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "608877716960",
+    "project_id": "assistrend-4c36d",
+    "storage_bucket": "assistrend-4c36d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:608877716960:android:56dee5638483c54439f785",
+        "android_client_info": {
+          "package_name": "com.example.assistrend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCh_X1_qh8UfZymfi31TCrZb7-47cdEeho"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
