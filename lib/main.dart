@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'assistrend_signup.dart';
 import 'assistrend_login.dart';
 import 'assistrend_home.dart';
+import 'google_signin.dart';
 
 
 void main() async{
@@ -31,6 +32,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => AssistrendLogin(),
         '/signup': (context) => AssistrendSignUp(),
         '/home': (context) => AssistrendHome(),
+        '/google':(context) => GoogleSignInPage(),
       },
     );
   }
