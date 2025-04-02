@@ -43,6 +43,7 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Registration failed: $e')),
       );
+        print("!!!!   $e");
     } finally {
       setState(() {
         _isLoading = false;
@@ -184,36 +185,36 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
                       ),
               ),
 
-              ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/google');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Image.asset(
-                        'assets/google_logo.png', // Add Google logo in your assets folder
-                        height: 24,
-                      ),
-                      SizedBox(width: 10),
-                      Text(
-                        'Sign Up with Google',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
+              // ElevatedButton(
+              //     onPressed: () {
+              //       Navigator.pushNamed(context, '/google');
+              //     },
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: Colors.white,
+              //       padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+              //       shape: RoundedRectangleBorder(
+              //         borderRadius: BorderRadius.circular(25),
+              //       ),
+              //     ),
+              //     child: Row(
+              //       mainAxisSize: MainAxisSize.min,
+              //       children: [
+              //         Image.asset(
+              //           'assets/google_logo.png', // Add Google logo in your assets folder
+              //           height: 24,
+              //         ),
+              //         SizedBox(width: 10),
+              //         Text(
+              //           'Sign Up with Google',
+              //           style: TextStyle(
+              //             color: Colors.black,
+              //             fontSize: 16,
+              //             fontWeight: FontWeight.bold,
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //   )
 
 
             ],

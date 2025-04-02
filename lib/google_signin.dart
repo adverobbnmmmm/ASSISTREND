@@ -1,76 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-final GoogleSignIn _googleSignIn = GoogleSignIn(
-  scopes: ['email', 'profile', 'openid'],
+class GoogleSignInService {
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+  clientId: '657499594632-ota692hjv442mjfle75c35fv4noeq67b.apps.googleusercontent.com',
+  scopes: ['email', 'profile'],
 );
 
-void main() {
-  runApp(MyApp());
-}
 
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: GoogleSignInPage(),
-    );
-  }
-}
-
-class GoogleSignInPage extends StatefulWidget {
-  @override
-  _GoogleSignInPageState createState() => _GoogleSignInPageState();
-}
-
-class _GoogleSignInPageState extends State<GoogleSignInPage> {
-  GoogleSignInAccount? _user;
-
-  Future<void> signInWithGoogle() async {
+  static Future<void> handleGoogleSignIn(BuildContext context) async {
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return;
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return; // User canceled the sign-in
 
-      final googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      // You'll need to send these tokens to your Django Backend
-      final accessToken = googleAuth.accessToken;
-      final idToken = googleAuth.idToken;
+      final String? idToken = googleAuth.idToken;
+      final String? accessToken = googleAuth.accessToken;
 
-      print("Access Token: $accessToken");
-      print("ID Token: $idToken");
-
-      // Send tokens to your Django backend for verification and authentication
+      // Send the accessToken to your Django backend for verification
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/auth/google/'),
-        body: {'access_token': accessToken, 'id_token': idToken},
+        Uri.parse('http://localhost:8000/auth/google/'),  // Adjust this URL to your Django backend endpoint
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'access_token': accessToken,
+          'id_token': idToken,
+        }),
       );
 
       if (response.statusCode == 200) {
-        print('Login Successful');
+        final responseData = json.decode(response.body);
+        final String backendAccessToken = responseData['access'];
+
+        // Save the backend access token (use SharedPreferences or similar)
+        print("Successfully authenticated: $backendAccessToken");
       } else {
-        print('Login Failed');
+        print("Google Sign-In failed. Server response: ${response.body}");
       }
-
-      setState(() {
-        _user = googleUser;
-      });
     } catch (error) {
-      print('Error: $error');
+      print("Google Sign-In Error: $error");
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Google Login Example')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: signInWithGoogle,
-          child: Text('Sign in with Google'),
-        ),
-      ),
-    );
   }
 }

@@ -1,7 +1,13 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'assistrend_signup.dart'; // Import the login page
 import 'services/api_service.dart';
 import 'utils/storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+// import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 
 class AssistrendLogin extends StatefulWidget {
   @override
@@ -40,6 +46,58 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
       });
     }
   }
+
+  Future<void> _handleGoogleSignIn() async {
+  try {
+    final GoogleSignIn _googleSignIn = GoogleSignIn(
+      scopes: ['email', 'profile'],
+    );
+
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) return; // User canceled the login
+
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final String? idToken = googleAuth.idToken;
+    final String? accessToken = googleAuth.accessToken;
+
+    // Send the ID token to your Django backend for verification (using your callback URL)
+    final response = await http.post(
+      Uri.parse('http://10.0.2.2:8000/auth/google/'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'id_token': idToken,
+        'access_token': accessToken,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
+      final String backendAccessToken = responseData['access'];
+
+      // Store the backend access token
+      await Storage.saveToken(backendAccessToken);
+
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google Sign-In failed. Please try again.')),
+      );
+    }
+  } catch (error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Google Sign-In Error: $error')),
+    );
+    print("111111111111  $error");
+  }
+}
+
+
+// Future<void> printStoredToken() async {
+//   final token = await Storage.getToken();
+//   print('Stored Token: $token');
+// }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -134,14 +192,31 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
                   color: Colors.white70,
                 ),
               ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _handleGoogleSignIn,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 9),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+                child: Text(
+                  'Sign In with Google',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
               SizedBox(height: 70),
               GestureDetector(
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => AssistrendSignUp(),
-                    ),
+                    MaterialPageRoute(builder: (context) => AssistrendSignUp()),
                   );
                 },
                 child: Text.rich(
@@ -149,17 +224,11 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
                     children: [
                       TextSpan(
                         text: 'Not a member? ',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 15,
-                        ),
+                        style: TextStyle(color: Colors.grey, fontSize: 15),
                       ),
                       TextSpan(
                         text: 'Sign Up',
-                        style: TextStyle(
-                          color: Colors.blueAccent,
-                          fontSize: 17,
-                        ),
+                        style: TextStyle(color: Colors.blueAccent, fontSize: 17),
                       ),
                     ],
                   ),

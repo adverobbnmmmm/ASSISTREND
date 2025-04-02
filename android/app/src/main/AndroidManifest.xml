@@ -48,8 +48,8 @@
 
         <!-- Google Services Configuration -->
         <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="YOUR_APPLICATION_ID"/>
+            android:name="com.google.android.gms.auth.api.API_KEY"
+            android:value="657499594632-ota692hjv442mjfle75c35fv4noeq67b.apps.googleusercontent.com"/>
 
             
     </application>

@@ -15,7 +15,8 @@
     the `--base-href` argument provided to `flutter build`.
   -->
   <base href="$FLUTTER_BASE_HREF">
-
+  <script src="https://apis.google.com/js/platform.js" async defer></script>
+  <meta name="google-signin-client_id" content="657499594632-ota692hjv442mjfle75c35fv4noeq67b.apps.googleusercontent.com">
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
@@ -34,5 +35,15 @@
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    window.addEventListener('flutter-initialized', function () {
+      gapi.load('auth2', function () {
+        gapi.auth2.init({
+          client_id: '657499594632-ota692hjv442mjfle75c35fv4noeq67b.apps.googleusercontent.com'
+        });
+      });
+    });
+  </script>
+  <script src="main.dart.js"></script>
 </body>
 </html>
