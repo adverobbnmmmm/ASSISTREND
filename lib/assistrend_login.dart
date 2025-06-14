@@ -1,13 +1,13 @@
 import 'dart:math';
+import 'package:assistrend/assistrend_forgotpass.dart';
 import 'package:flutter/material.dart';
-import 'assistrend_signup.dart'; // Import the login page
+import 'assistrend_signup.dart';
 import 'services/api_service.dart';
 import 'utils/storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 // import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
 
 class AssistrendLogin extends StatefulWidget {
   @override
@@ -29,17 +29,17 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
         _emailController.text,
         _passwordController.text,
       );
-      
+
       // Store the token
       final access = response['access'];
       await Storage.saveToken(access);
-      
+
       // Navigate to home screen
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
     } finally {
       setState(() {
         _isLoading = false;
@@ -48,56 +48,51 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
   }
 
   Future<void> _handleGoogleSignIn() async {
-  try {
-    final GoogleSignIn _googleSignIn = GoogleSignIn(
-      scopes: ['email', 'profile'],
-    );
-
-    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return; // User canceled the login
-
-    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-    final String? idToken = googleAuth.idToken;
-    final String? accessToken = googleAuth.accessToken;
-
-    // Send the ID token to your Django backend for verification (using your callback URL)
-    final response = await http.post(
-      Uri.parse('http://10.0.2.2:8000/auth/google/'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'id_token': idToken,
-        'access_token': accessToken,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final responseData = json.decode(response.body);
-      final String backendAccessToken = responseData['access'];
-
-      // Store the backend access token
-      await Storage.saveToken(backendAccessToken);
-
-      Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google Sign-In failed. Please try again.')),
+    try {
+      final GoogleSignIn _googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
       );
+
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return; // User canceled the login
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+      final String? accessToken = googleAuth.accessToken;
+
+      // Send the ID token to your Django backend for verification (using your callback URL)
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:8000/auth/google/'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'id_token': idToken, 'access_token': accessToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final String backendAccessToken = responseData['access'];
+
+        // Store the backend access token
+        await Storage.saveToken(backendAccessToken);
+
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google Sign-In failed. Please try again.')),
+        );
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Google Sign-In Error: $error')));
+      print("111111111111  $error");
     }
-  } catch (error) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Google Sign-In Error: $error')),
-    );
-    print("111111111111  $error");
   }
-}
 
-
-// Future<void> printStoredToken() async {
-//   final token = await Storage.getToken();
-//   print('Stored Token: $token');
-// }
-
-
+  // Future<void> printStoredToken() async {
+  //   final token = await Storage.getToken();
+  //   print('Stored Token: $token');
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +118,7 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
                   ),
                 ),
               ),
-              SizedBox(height: 30),
+              SizedBox(height: 20),
               Text(
                 'Login',
                 style: TextStyle(
@@ -132,7 +127,7 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 30),
+              SizedBox(height: 20),
               TextField(
                 controller: _emailController,
                 style: TextStyle(color: Colors.white),
@@ -163,7 +158,31 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
                   ),
                 ),
               ),
-              SizedBox(height: 60),
+              SizedBox(height: 20),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AssistrendForgotpass(),
+                    ),
+                  );
+                },
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Forgot password?',
+                        style: TextStyle(
+                          color: Colors.blueAccent,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 40),
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
@@ -173,24 +192,22 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
                     borderRadius: BorderRadius.circular(25),
                   ),
                 ),
-                child: _isLoading
-                    ? CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                        'Login',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                child:
+                    _isLoading
+                        ? CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                          'Login',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
               ),
-              SizedBox(height: 50),
+              SizedBox(height: 20),
               Text(
                 'Or login with',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.white70,
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.white70),
               ),
               SizedBox(height: 20),
               ElevatedButton(
@@ -211,7 +228,7 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
                   ),
                 ),
               ),
-              SizedBox(height: 70),
+              SizedBox(height: 50),
               GestureDetector(
                 onTap: () {
                   Navigator.push(
@@ -228,7 +245,10 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
                       ),
                       TextSpan(
                         text: 'Sign Up',
-                        style: TextStyle(color: Colors.blueAccent, fontSize: 17),
+                        style: TextStyle(
+                          color: Colors.blueAccent,
+                          fontSize: 15,
+                        ),
                       ),
                     ],
                   ),
