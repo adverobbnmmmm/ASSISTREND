@@ -3,6 +3,8 @@ import 'assistrend_login.dart'; // Import the login page if needed
 import 'services/api_service.dart';
 import 'utils/storage.dart';
 import 'screens/otp_screen.dart';
+import 'package:url_launcher/link.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AssistrendSignUp extends StatefulWidget {
   @override
@@ -11,7 +13,7 @@ class AssistrendSignUp extends StatefulWidget {
 
 class _AssistrendSignUpState extends State<AssistrendSignUp> {
   bool isRememberMeChecked = false;
-  bool _privacyPolicyAccepted = false; 
+  bool _privacyPolicyAccepted = false;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -29,9 +31,9 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
         _emailController.text,
         _phoneController.text,
         _passwordController.text,
-        _privacyPolicyAccepted,  // Ensure this is a boolean value
+        _privacyPolicyAccepted, // Ensure this is a boolean value
       );
-      
+
       // Handle successful registration
       Navigator.push(
         context,
@@ -40,14 +42,21 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration failed: $e')),
-      );
-        print("!!!!   $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Registration failed: $e')));
+      print("!!!!   $e");
     } finally {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _launchURL() async {
+    final Uri url = Uri.parse('https://assistrend.com/');
+    if (!await launchUrl(url)) {
+      throw 'Could not launch $url';
     }
   }
 
@@ -60,8 +69,18 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
+
             children: [
-              SizedBox(height: 64),
+              SizedBox(height: 30),
+              Align(
+                alignment: Alignment.topLeft,
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: () {
+                    Navigator.pop(context); // Go back
+                  },
+                ),
+              ),
               Container(
                 height: 150,
                 width: 150,
@@ -74,7 +93,7 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
                   ),
                 ),
               ),
-              SizedBox(height: 30),
+              SizedBox(height: 20),
               Text(
                 'Sign Up',
                 style: TextStyle(
@@ -83,7 +102,7 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 30),
+              SizedBox(height: 20),
               TextField(
                 controller: _nameController,
                 style: TextStyle(color: Colors.white),
@@ -115,7 +134,7 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
               ),
               SizedBox(height: 20),
               TextField(
-                controller: _phoneController,  // ✅ Added phone input field
+                controller: _phoneController, // ✅ Added phone input field
                 style: TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'Enter your phone number',
@@ -144,11 +163,11 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 10),
               Row(
                 children: [
                   Checkbox(
-                    value: _privacyPolicyAccepted,  // ✅ Privacy policy checkbox
+                    value: _privacyPolicyAccepted, //Privacy policy checkbox
                     onChanged: (bool? newValue) {
                       setState(() {
                         _privacyPolicyAccepted = newValue ?? false;
@@ -157,9 +176,25 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
                     activeColor: Colors.blueAccent,
                     checkColor: Colors.white,
                   ),
-                  Text(
-                    'Accept Privacy Policy',
-                    style: TextStyle(color: Colors.white),
+                  InkWell(
+                    onTap: (_launchURL),
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'Accept ',
+                            style: TextStyle(color: Colors.grey, fontSize: 15),
+                          ),
+                          TextSpan(
+                            text: 'Priavacy Policy',
+                            style: TextStyle(
+                              color: Colors.blueAccent,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -173,16 +208,17 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
                     borderRadius: BorderRadius.circular(25),
                   ),
                 ),
-                child: _isLoading
-                    ? CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                child:
+                    _isLoading
+                        ? CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                          'Sign Up',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
               ),
 
               // ElevatedButton(
@@ -215,8 +251,6 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
               //       ],
               //     ),
               //   )
-
-
             ],
           ),
         ),
