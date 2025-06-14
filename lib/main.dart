@@ -6,10 +6,9 @@ import 'assistrend_login.dart';
 import 'assistrend_home.dart';
 // import 'google_signin.dart';
 
-
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('auth_token');
   runApp(MyApp(initialRoute: token != null ? '/home' : '/login'));
@@ -25,6 +24,11 @@ class MyApp extends StatelessWidget {
       title: 'Assistrend',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: Colors.blueAccent,
+          selectionColor: Colors.blueAccent,
+          selectionHandleColor: Colors.blue,
+        ),
       ),
       initialRoute: initialRoute,
       routes: {
