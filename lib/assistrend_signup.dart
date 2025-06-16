@@ -186,7 +186,7 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
                             style: TextStyle(color: Colors.grey, fontSize: 15),
                           ),
                           TextSpan(
-                            text: 'Priavacy Policy',
+                            text: 'Privacy Policy',
                             style: TextStyle(
                               color: Colors.blueAccent,
                               fontSize: 15,
