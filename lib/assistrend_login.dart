@@ -15,8 +15,8 @@ class AssistrendLogin extends StatefulWidget {
 }
 
 class _AssistrendLoginState extends State<AssistrendLogin> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController(text: "notpotatogun@gmail.com");
+  final TextEditingController _passwordController = TextEditingController(text: "Password@123");
   bool _isLoading = false;
 
   Future<void> _handleLogin() async {

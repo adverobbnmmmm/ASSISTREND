@@ -1,9 +1,9 @@
+import 'package:assistrend/presentation/home/homepage.dart';
 import 'package:flutter/material.dart';
 import 'assistrend_opening.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'assistrend_signup.dart';
 import 'assistrend_login.dart';
-import 'assistrend_home.dart';
 // import 'google_signin.dart';
 
 void main() async {
@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => AssistrendOpening(),
         '/login': (context) => AssistrendLogin(),
         '/signup': (context) => AssistrendSignUp(),
-        '/home': (context) => AssistrendHome(),
+        '/home': (context) => HomePage(),
         // '/google':(context) => GoogleSignInPage(),
       },
     );
