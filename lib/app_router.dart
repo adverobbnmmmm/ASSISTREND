@@ -1,0 +1,110 @@
+import 'package:assistrend/features/home/presentation/homepage.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// Screens
+import 'assistrend_opening.dart';
+import 'assistrend_home.dart';
+import 'assistrend_forgotpass.dart';
+import 'profile.dart';
+import 'more_post.dart';
+import 'features/auth/presentation/assistrend_login.dart';
+import 'features/auth/presentation/assistrend_signup.dart';
+import 'features/auth/presentation/otp_screen.dart';
+
+/// The router configuration for the app using GoRouter
+class AppRouter {
+  // Private constructor
+  AppRouter._();
+
+  /// The go router configuration used for routing
+  static final GoRouter router = GoRouter(
+    initialLocation: '/',
+    redirect: _handleRedirect,
+    routes: [
+      // Opening splash screen
+      GoRoute(
+        path: '/',
+        name: 'opening',
+        builder: (context, state) => AssistrendOpening(),
+      ),
+      // Auth routes
+      GoRoute(
+        path: '/login',
+        name: 'login',
+        builder: (context, state) => AssistrendLogin(),
+      ),
+      GoRoute(
+        path: '/signup',
+        name: 'signup',
+        builder: (context, state) => AssistrendSignUp(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        name: 'forgotPassword',
+        builder: (context, state) => AssistrendForgotpass(),
+      ),
+      GoRoute(
+        path: '/otp-verification',
+        name: 'otpVerification',
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? '';
+          return OTPScreen(email: email);
+        },
+      ),
+      // Main app routes (protected)
+      GoRoute(
+        path: '/home',
+        name: 'home',
+        builder: (context, state) => HomePage(),
+      ),      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => ProfilePage(),
+      ),
+      GoRoute(
+        path: '/more-posts',
+        name: 'morePosts',
+        builder: (context, state) => SeeMorePostsPage(),
+      ),
+    ],
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Text('Page not found: ${state.uri.path}'),
+      ),
+    ),
+  );
+  /// Handles authentication redirects
+  static Future<String?> _handleRedirect(BuildContext context, GoRouterState state) async {
+    // Get current auth status
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = prefs.getString('access_token') != null;
+    final isOnAuthPage = state.matchedLocation == '/login' || 
+                         state.matchedLocation == '/signup' || 
+                         state.matchedLocation == '/forgot-password' ||
+                         state.matchedLocation == '/otp-verification';
+    final isOnOpeningPage = state.matchedLocation == '/';
+    
+    print('DEBUG: Current route: ${state.matchedLocation}');
+    print('DEBUG: isLoggedIn: $isLoggedIn');
+    print('DEBUG: isOnAuthPage: $isOnAuthPage');
+    print('DEBUG: isOnOpeningPage: $isOnOpeningPage');
+    
+    // If not logged in and trying to access protected routes
+    if (!isLoggedIn && !isOnAuthPage && !isOnOpeningPage) {
+      print('DEBUG: Redirecting to /login because user is not logged in and trying to access protected route');
+      return '/login';
+    }
+    
+    // If logged in and trying to access auth pages
+    if (isLoggedIn && isOnAuthPage) {
+      print('DEBUG: Redirecting to /home because user is logged in and trying to access auth page');
+      return '/home';
+    }
+    
+    // No redirect needed
+    print('DEBUG: No redirect needed');
+    return null;
+  }
+}

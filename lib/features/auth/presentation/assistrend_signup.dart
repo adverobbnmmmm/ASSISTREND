@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'assistrend_login.dart'; // Import the login page if needed
-import 'services/api_service.dart';
-import 'utils/storage.dart';
-import 'screens/otp_screen.dart';
+import '../../../core/network/api_service.dart';
+import '../../../shared/utils/storage.dart';
+import 'otp_screen.dart';
 import 'package:url_launcher/link.dart';
 import 'package:url_launcher/url_launcher.dart';
 
