@@ -1,4 +1,4 @@
-import 'package:assistrend/presentation/main/debouncer.dart';
+import 'package:assistrend/features/home/main/debouncer.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 

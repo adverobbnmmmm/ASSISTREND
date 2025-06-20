@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'assistrend_login.dart';
-import 'services/api_service.dart';
-import 'utils/storage.dart';
-
+import 'features/auth/presentation/assistrend_login.dart';
+import 'core/network/api_service.dart';
+import 'shared/utils/storage.dart';
+import 'package:go_router/go_router.dart';
 class AssistrendHome extends StatefulWidget {
   @override
   _AssistrendHomeState createState() => _AssistrendHomeState();
@@ -20,6 +20,7 @@ class _AssistrendHomeState extends State<AssistrendHome> {
 
   Future<void> _loadUserData() async {
     final token = await Storage.getToken();
+    print('DEBUG: Token in home screen: $token');
     if (token != null) {
       try {
         final profile = await ApiService.getProfile(token);
@@ -28,23 +29,32 @@ class _AssistrendHomeState extends State<AssistrendHome> {
           _isLoading = false;
         });
       } catch (e) {
+        print('DEBUG: Error loading profile: $e');
         _handleLogout();
       }
     } else {
+      print('DEBUG: No token found in home screen');
       _handleLogout();
     }
   }
 
   Future<void> _handleLogout() async {
     final token = await Storage.getToken();
+    print('DEBUG: Logging out with token: $token');
     if (token != null) {
-      await ApiService.logout(token);
+      try {
+        await ApiService.logout(token);
+        print('DEBUG: Logout API call successful');
+      } catch (e) {
+        print('DEBUG: Error during logout API call: $e');
+      }
     }
     await Storage.clearToken();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => AssistrendLogin()),
-    );
+    final checkToken = await Storage.getToken();
+    print('DEBUG: Token after clearToken: $checkToken');
+    if (context.mounted) {
+      context.go('/login');
+    }
   }
 
   @override

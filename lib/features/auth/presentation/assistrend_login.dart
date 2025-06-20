@@ -1,10 +1,11 @@
-import 'package:assistrend/assistrend_forgotpass.dart';
+
+import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'assistrend_signup.dart';
-import 'services/api_service.dart';
-import 'utils/storage.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/network/api_service.dart';
+import '../../../shared/utils/storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-// import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -33,8 +34,10 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
       final access = response['access'];
       await Storage.saveToken(access);
 
-      // Navigate to home screen
-      Navigator.pushReplacementNamed(context, '/home');
+      // Navigate to home screen using Go Router
+      if (context.mounted) {
+        context.go('/home');
+      }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -74,7 +77,9 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
         // Store the backend access token
         await Storage.saveToken(backendAccessToken);
 
-        Navigator.pushReplacementNamed(context, '/home');
+        if (context.mounted) {
+          context.go('/home');
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Google Sign-In failed. Please try again.')),
@@ -160,12 +165,8 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
               SizedBox(height: 20),
               GestureDetector(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AssistrendForgotpass(),
-                    ),
-                  );
+                  // Navigate to forgot password using GoRouter
+                  context.push('/forgot-password');
                 },
                 child: Text.rich(
                   TextSpan(
@@ -230,10 +231,8 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
               SizedBox(height: 50),
               GestureDetector(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => AssistrendSignUp()),
-                  );
+                  // Navigate to signup using GoRouter
+                  context.push('/signup');
                 },
                 child: Text.rich(
                   TextSpan(

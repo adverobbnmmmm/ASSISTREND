@@ -92,13 +92,26 @@ class ApiService {
   }
 
   // User Logout
-  static Future<dynamic> logout(String token) async {
-    return await _makeRequest(
-      'account/logout/',
-      null,
-      'POST',
-      token,
-    );
+  static Future<void> logout(String refreshToken) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${baseUrl}/api/accounts/logout/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $refreshToken',
+        },
+        body: json.encode({
+          'refresh_token': refreshToken,
+        }),
+      );
+      
+      if (response.statusCode != 205) {
+        throw Exception('Logout failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error during logout: $e');
+      throw Exception('Logout request failed: $e');
+    }
   }
 
   // Get User Profile

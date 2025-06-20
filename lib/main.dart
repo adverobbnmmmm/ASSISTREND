@@ -1,43 +1,55 @@
-import 'package:assistrend/presentation/home/homepage.dart';
 import 'package:flutter/material.dart';
-import 'assistrend_opening.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'assistrend_signup.dart';
-import 'assistrend_login.dart';
-//import 'google_signin.dart';
+
+import 'package:flutter/services.dart';
+import 'app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Set preferred orientations (optional)
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('auth_token');
-  runApp(MyApp(initialRoute: token != null ? '/home' : '/login'));
+  // Initialize any necessary services here
+  
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final String initialRoute;
+  const MyApp({super.key});
 
-  MyApp({required this.initialRoute});
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Assistrend',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        textSelectionTheme: TextSelectionThemeData(
+        brightness: Brightness.dark,
+        primaryColor: Colors.blue,
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          elevation: 0,
+        ),
+        textSelectionTheme: const TextSelectionThemeData(
           cursorColor: Colors.blueAccent,
           selectionColor: Colors.blueAccent,
           selectionHandleColor: Colors.blue,
         ),
+        inputDecorationTheme: InputDecorationTheme(
+          labelStyle: const TextStyle(color: Colors.grey),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.blueAccent),
+          ),
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.blueAccent),
+          ),
+        ),
       ),
-      initialRoute: initialRoute,
-      routes: {
-        '/': (context) => AssistrendOpening(),
-        '/login': (context) => AssistrendLogin(),
-        '/signup': (context) => AssistrendSignUp(),
-        '/home': (context) => HomePage(),
-        // '/google':(context) => GoogleSignInPage(),
-      },
+      // Use the router configuration from the AppRouter class
+      routerConfig: AppRouter.router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }

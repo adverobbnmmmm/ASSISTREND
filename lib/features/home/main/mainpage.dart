@@ -1,5 +1,5 @@
-import 'package:assistrend/presentation/home/homepage.dart';
-import 'package:assistrend/presentation/home/messenger.dart';
+import 'package:assistrend/features/home/presentation/homepage.dart';
+import 'package:assistrend/features/home/presentation/messenger.dart';
 import 'package:flutter/material.dart';
 
 import 'bottomnav.dart';
