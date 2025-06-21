@@ -1,98 +1,162 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_service.dart';
+import '../providers/auth_provider.dart';
+import '../models/auth_state.dart';
+import 'package:go_router/go_router.dart';
 
-class OTPScreen extends StatefulWidget {
+class OTPScreen extends ConsumerStatefulWidget {
   final String email;
 
   const OTPScreen({Key? key, required this.email}) : super(key: key);
 
   @override
-  State<OTPScreen> createState() => _OTPScreenState();
+  _OTPScreenState createState() => _OTPScreenState();
 }
 
-class _OTPScreenState extends State<OTPScreen> {
+class _OTPScreenState extends ConsumerState<OTPScreen> {
   final TextEditingController _otpController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> verifyOTP() async {
-    final String backendUrl = "http://127.0.0.1:8000/api/account/verify_otp/"; // Update if needed
-
-    if (_otpController.text.isEmpty) {
+  void _showError(String message) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the OTP.')),
+        SnackBar(content: Text(message)),
       );
-      return;
     }
+  }
 
+  Future<void> _verifyOTP() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final response = await http.post(
-        Uri.parse(backendUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          "email": widget.email,
-          "otpCode": _otpController.text,
-        }),
+      // Use the Riverpod provider to verify OTP
+      await ref.read(authProvider.notifier).verifyOTP(
+        widget.email,
+        _otpController.text,
       );
 
-      if (response.statusCode == 200) {
+      // After successful verification, navigate to login
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('OTP verified successfully!')),
+          SnackBar(content: Text('Registration successful! Please login.')),
         );
-        Navigator.pop(context); // Go back or navigate to another screen
-      } else {
-        final responseData = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData['message'] ?? 'OTP verification failed!')),
-        );
+        context.go('/login');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Something went wrong. Try again later.')),
-      );
+      _showError('OTP verification failed: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Listen to auth state changes
+    ref.listen(authProvider, (previous, current) {
+      if (current.status == AuthStatus.error && current.errorMessage != null) {
+        _showError(current.errorMessage!);
+      }
+    });
+
     return Scaffold(
-      appBar: AppBar(title: const Text('OTP Verification')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Verify OTP for ${widget.email}',
-              style: const TextStyle(fontSize: 18),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _otpController,
-              decoration: const InputDecoration(
-                labelText: 'Enter OTP',
-                border: OutlineInputBorder(),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: Text('Verify OTP'),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context); // Go back
+          },
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(height: 40),
+              Text(
+                'Enter OTP',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _isLoading ? null : verifyOTP,
-              child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Verify OTP'),
-            ),
-          ],
+              SizedBox(height: 20),
+              Text(
+                'Please enter the verification code sent to ${widget.email}',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 40),
+              TextField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Enter OTP',
+                  labelStyle: TextStyle(color: Colors.grey),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.blueAccent),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.blueAccent),
+                  ),
+                ),
+              ),
+              SizedBox(height: 40),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _verifyOTP,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 40, 108, 224),
+                  padding: EdgeInsets.symmetric(horizontal: 100, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+                child: _isLoading
+                    ? CircularProgressIndicator(color: Colors.white)
+                    : Text(
+                        'Verify',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+              SizedBox(height: 20),
+              TextButton(
+                onPressed: () {
+                  // Resend OTP implementation
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('OTP resent to ${widget.email}')),
+                  );
+                },
+                child: Text(
+                  "Didn't receive the code? Resend",
+                  style: TextStyle(
+                    color: Colors.blueAccent,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

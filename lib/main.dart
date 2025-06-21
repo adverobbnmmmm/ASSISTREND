@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_router.dart';
 
 void main() async {
@@ -10,10 +11,13 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
-  // Initialize any necessary services here
-  
-  runApp(const MyApp());
+    
+  runApp(
+    // Wrap the app with ProviderScope for Riverpod
+    ProviderScope(
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
