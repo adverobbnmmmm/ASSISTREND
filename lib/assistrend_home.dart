@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'features/auth/presentation/assistrend_login.dart';
 import 'core/network/api_service.dart';
 import 'shared/utils/storage.dart';
 import 'package:go_router/go_router.dart';
@@ -88,11 +87,11 @@ class _AssistrendHomeState extends State<AssistrendHome> {
                     ),
                   ),
                   SizedBox(height: 30),
-                  _buildFeatureCard(
+                    _buildFeatureCard(
                     icon: Icons.person,
                     title: 'Profile',
                     onTap: () {
-                      // Navigate to profile screen
+                      context.go('/profile');
                     },
                   ),
                   _buildFeatureCard(

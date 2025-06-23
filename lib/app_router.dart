@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // Screens
 import 'assistrend_opening.dart';
-import 'assistrend_home.dart';
 import 'assistrend_forgotpass.dart';
 import 'profile.dart';
 import 'more_post.dart';

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 import 'app_router.dart';
+
+// Conditionally import Firebase packages
+import 'package:firebase_core/firebase_core.dart' if (dart.library.js_util) '' as firebase;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,9 +16,23 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize any necessary services here
+  // Initialize Firebase on supported platforms only
+  await _initializeFirebase();
   
   runApp(const MyApp());
+}
+
+Future<void> _initializeFirebase() async {
+  try {
+    // Only initialize Firebase on supported platforms
+    if (!kIsWeb && !(Platform.isWindows)) {
+      await firebase.Firebase.initializeApp();
+      debugPrint('Firebase initialized successfully');
+    } else {
+      debugPrint('Firebase initialization skipped on this platform');
+    }  } catch (e) {
+    debugPrint('Failed to initialize Firebase: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {
