@@ -3,7 +3,7 @@ import 'package:assistrend/shared/utils/storage.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2:8000/api/'; // Auth service on port 8000
+  static const String baseUrl = 'http://10.0.2.2:8000/api/'; 
 
   static Future<dynamic> _makeRequest(
     String endpoint,

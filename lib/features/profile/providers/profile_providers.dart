@@ -172,7 +172,7 @@ static Future<Map<String, dynamic>> getProfileData(int userId) async {
   }
   
   return await _makeRequest(
-    'social-service/features/profile?userId=$userId',  // Confirm this path matches your API
+    'social-service/features/profile?userId=$userId', 
     null,
     'GET',
     token,
