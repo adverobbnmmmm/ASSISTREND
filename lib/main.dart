@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_router.dart';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 // Conditionally import Firebase packages
 import 'package:firebase_core/firebase_core.dart' if (dart.library.js_util) '' as firebase;
 
@@ -15,7 +16,7 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-    
+  await _initializeFirebase();  
   runApp(
     // Wrap the app with ProviderScope for Riverpod
     ProviderScope(

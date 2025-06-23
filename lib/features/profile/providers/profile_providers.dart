@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import '../models/profile_model.dart';
 import '../../../shared/utils/storage.dart';
 import '../../../features/auth/providers/auth_provider.dart';
@@ -153,7 +156,7 @@ Widget _buildProfileHeader(ProfileModel profile) {
             IconButton(
               icon: Icon(Icons.edit, color: Colors.blue),
               onPressed: () {
-                _showEditProfileDialog();
+                //_showEditProfileDialog();
               },
               tooltip: 'Edit Profile',
             ),
@@ -165,16 +168,41 @@ Widget _buildProfileHeader(ProfileModel profile) {
 }
 
 // In SocialApiService.dart, make sure the getProfileData method URL is correct:
-static Future<Map<String, dynamic>> getProfileData(int userId) async {
+ Future<Map<String, dynamic>> getProfileData(int userId) async {
   final token = await Storage.getToken();
   if (token == null) {
     throw Exception('No authentication token found');
   }
   
   return await _makeRequest(
-    'social-service/features/profile?userId=$userId', 
-    null,
-    'GET',
-    token,
+    'social-service/features/profile?userId=$userId',
   );
+}
+
+// Add this method to your profile provider class
+
+// Add this method to your profile provider class
+Future<dynamic> _makeRequest(String endpoint, {Map<String, dynamic>? data, String method = 'GET', String? token}) async {
+  final baseUrl = 'http://127.0.0.1:8001/';
+  final url = Uri.parse('$baseUrl/$endpoint');
+  
+  final headers = {
+    'Content-Type': 'application/json',
+    if (token != null) 'Authorization': 'Bearer $token',
+  };
+  
+  try {
+    final response = method == 'POST' 
+      ? await http.post(url, body: jsonEncode(data), headers: headers)
+      : await http.get(url, headers: headers);
+    
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to make API request: ${response.statusCode}');
+    }
+  } catch (e) {
+    print('Error making request: $e');
+    throw e;
+  }
 }
