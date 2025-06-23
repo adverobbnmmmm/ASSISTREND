@@ -8,44 +8,65 @@ import '../../../shared/utils/storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/auth_provider.dart';
+import '../models/auth_state.dart';
 
-class AssistrendLogin extends StatefulWidget {
+class AssistrendLogin extends ConsumerStatefulWidget {
   @override
   _AssistrendLoginState createState() => _AssistrendLoginState();
 }
 
-class _AssistrendLoginState extends State<AssistrendLogin> {
+class _AssistrendLoginState extends ConsumerState<AssistrendLogin> {
   final TextEditingController _emailController = TextEditingController(text: "notpotatogun@gmail.com");
   final TextEditingController _passwordController = TextEditingController(text: "Password@123");
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Add a listener to auth state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = ref.read(authProvider);
+      if (authState.status == AuthStatus.authenticated) {
+        context.go('/home');
+      } else if (authState.status == AuthStatus.error) {
+        _showError(authState.errorMessage ?? 'Authentication error');
+      }
+    });
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+
   Future<void> _handleLogin() async {
+    if (_isLoading) return;
+    
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final response = await ApiService.login(
+      // Use the Riverpod provider to login
+      await ref.read(authProvider.notifier).login(
         _emailController.text,
         _passwordController.text,
       );
 
-      // Store the token
-      final access = response['access'];
-      await Storage.saveToken(access);
-
-      // Navigate to home screen using Go Router
-      if (context.mounted) {
-        context.go('/home');
-      }
+      // Navigation is handled in the listener
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+      _showError('Login failed: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -73,9 +94,15 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         final String backendAccessToken = responseData['access'];
+        final String backendRefreshToken = responseData['refresh'] ?? '';
+        final int userId = responseData['userId'] ?? 0;
 
-        // Store the backend access token
-        await Storage.saveToken(backendAccessToken);
+        // Store the tokens and user ID using Riverpod state
+        ref.read(authProvider.notifier).state = AuthState.authenticated(
+          accessToken: backendAccessToken,
+          refreshToken: backendRefreshToken,
+          userId: userId,
+        );
 
         if (context.mounted) {
           context.go('/home');
@@ -93,13 +120,17 @@ class _AssistrendLoginState extends State<AssistrendLogin> {
     }
   }
 
-  // Future<void> printStoredToken() async {
-  //   final token = await Storage.getToken();
-  //   print('Stored Token: $token');
-  // }
-
   @override
   Widget build(BuildContext context) {
+    // Listen to auth state changes
+    ref.listen(authProvider, (previous, current) {
+      if (current.status == AuthStatus.authenticated) {
+        context.go('/home');
+      } else if (current.status == AuthStatus.error && current.errorMessage != null) {
+        _showError(current.errorMessage!);
+      }
+    });
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SingleChildScrollView(

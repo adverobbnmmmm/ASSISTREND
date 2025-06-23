@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'homepage.dart';
 import 'messenger.dart';
-
+import 'package:go_router/go_router.dart';
 class AppBarwidget extends StatelessWidget {
   const AppBarwidget({
     super.key,
@@ -19,7 +19,7 @@ class AppBarwidget extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 50,
+              width: 50,             
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.blue,
@@ -39,7 +39,9 @@ class AppBarwidget extends StatelessWidget {
                 border: Border.all(color: const Color(0xff1f339b), width: 1),
               ),
               child: IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    context.go('/profile');
+                  },
                   icon: const Image(
                     image: AssetImage('assets/dashboard.png'),
                     color: Colors.white,

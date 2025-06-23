@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
-import 'assistrend_login.dart'; // Import the login page if needed
+import 'assistrend_login.dart';
 import '../../../core/network/api_service.dart';
 import '../../../shared/utils/storage.dart';
 import 'otp_screen.dart';
 import 'package:url_launcher/link.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/auth_provider.dart';
+import '../models/auth_state.dart';
 
-class AssistrendSignUp extends StatefulWidget {
+class AssistrendSignUp extends ConsumerStatefulWidget {
   @override
   _AssistrendSignUpState createState() => _AssistrendSignUpState();
 }
 
-class _AssistrendSignUpState extends State<AssistrendSignUp> {
+class _AssistrendSignUpState extends ConsumerState<AssistrendSignUp> {
   bool isRememberMeChecked = false;
   bool _privacyPolicyAccepted = false;
   final TextEditingController _nameController = TextEditingController();
@@ -20,36 +23,58 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
   final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Listen to auth state changes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = ref.read(authProvider);
+      if (authState.status == AuthStatus.error) {
+        _showError(authState.errorMessage ?? 'Registration error');
+      }
+    });
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+
   Future<void> _handleSignUp() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final response = await ApiService.register(
+      // Use the Riverpod provider to register
+      await ref.read(authProvider.notifier).register(
         _nameController.text,
         _emailController.text,
         _phoneController.text,
         _passwordController.text,
-        _privacyPolicyAccepted, // Ensure this is a boolean value
+        _privacyPolicyAccepted,
       );
 
-      // Handle successful registration
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => OTPScreen(email: _emailController.text),
-        ),
-      );
+      // Navigate to OTP screen
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OTPScreen(email: _emailController.text),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Registration failed: $e')));
-      print("!!!!   $e");
+      _showError('Registration failed: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -62,6 +87,13 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen to auth state changes
+    ref.listen(authProvider, (previous, current) {
+      if (current.status == AuthStatus.error && current.errorMessage != null) {
+        _showError(current.errorMessage!);
+      }
+    });
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SingleChildScrollView(
@@ -134,7 +166,7 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
               ),
               SizedBox(height: 20),
               TextField(
-                controller: _phoneController, // ✅ Added phone input field
+                controller: _phoneController,
                 style: TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'Enter your phone number',
@@ -186,7 +218,7 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
                             style: TextStyle(color: Colors.grey, fontSize: 15),
                           ),
                           TextSpan(
-                            text: 'Priavacy Policy',
+                            text: 'Privacy Policy',
                             style: TextStyle(
                               color: Colors.blueAccent,
                               fontSize: 15,
@@ -220,37 +252,6 @@ class _AssistrendSignUpState extends State<AssistrendSignUp> {
                           ),
                         ),
               ),
-
-              // ElevatedButton(
-              //     onPressed: () {
-              //       Navigator.pushNamed(context, '/google');
-              //     },
-              //     style: ElevatedButton.styleFrom(
-              //       backgroundColor: Colors.white,
-              //       padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-              //       shape: RoundedRectangleBorder(
-              //         borderRadius: BorderRadius.circular(25),
-              //       ),
-              //     ),
-              //     child: Row(
-              //       mainAxisSize: MainAxisSize.min,
-              //       children: [
-              //         Image.asset(
-              //           'assets/google_logo.png', // Add Google logo in your assets folder
-              //           height: 24,
-              //         ),
-              //         SizedBox(width: 10),
-              //         Text(
-              //           'Sign Up with Google',
-              //           style: TextStyle(
-              //             color: Colors.black,
-              //             fontSize: 16,
-              //             fontWeight: FontWeight.bold,
-              //           ),
-              //         ),
-              //       ],
-              //     ),
-              //   )
             ],
           ),
         ),
