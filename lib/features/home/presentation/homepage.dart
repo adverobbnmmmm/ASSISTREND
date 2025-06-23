@@ -4,10 +4,10 @@ import 'package:assistrend/features/home/presentation/connect.dart';
 import 'package:assistrend/features/home/presentation/posts.dart';
 import 'package:assistrend/core/network/api_service.dart';
 import 'package:assistrend/shared/utils/storage.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:flutter/material.dart';
-
+import 'package:assistrend/features/auth/providers/auth_provider.dart';
 import 'messenger.dart';
 
 final ValueNotifier<bool> showContainer = ValueNotifier<bool>(false);
@@ -15,10 +15,10 @@ void toggleContainer() {
   showContainer.value = !showContainer.value;
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
-  Future<void> _handleLogout(BuildContext context) async {
+  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
     try {
       // Show loading indicator
       showDialog(
@@ -27,21 +27,8 @@ class HomePage extends StatelessWidget {
         builder: (context) => Center(child: CircularProgressIndicator()),
       );
       
-      // Get refresh token
-      final refreshToken = await Storage.getRefreshToken();
-      
-      // Call logout API if token exists
-      if (refreshToken != null) {
-        try {
-          await ApiService.logout(refreshToken);
-        } catch (e) {
-          print('Logout API error: $e');
-          // Continue with local logout even if API call fails
-        }
-      }
-      
-      // Clear all tokens
-      await Storage.clearAllTokens();
+      // Use the auth provider to logout
+      await ref.read(authProvider.notifier).logout();
       
       // Close loading dialog and navigate to login
       if (context.mounted) {
@@ -60,16 +47,25 @@ class HomePage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Get user info from auth state
+    final authState = ref.watch(authProvider);
+    final userId = authState.userId;
+    
     return SafeArea(
         child: Scaffold(
             appBar: AppBar(
               backgroundColor: const Color(0xff181a1c),
               title: const Text('Assistrend'),
               actions: [
+                if (userId != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12.0),
+                    child: Text('User ID: $userId', style: TextStyle(fontSize: 12)),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.logout),
-                  onPressed: () => _handleLogout(context),
+                  onPressed: () => _handleLogout(context, ref),
                   tooltip: 'Logout',
                 ),
               ],

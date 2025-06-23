@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_router.dart';
 
 // Conditionally import Firebase packages
@@ -16,10 +15,13 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize Firebase on supported platforms only
-  await _initializeFirebase();
-  
-  runApp(const MyApp());
+    
+  runApp(
+    // Wrap the app with ProviderScope for Riverpod
+    ProviderScope(
+      child: const MyApp(),
+    ),
+  );
 }
 
 Future<void> _initializeFirebase() async {
