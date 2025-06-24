@@ -40,7 +40,7 @@ class AppBarwidget extends StatelessWidget {
               ),
               child: IconButton(
                   onPressed: () {
-                    context.go('/profile');
+                    context.push('/profile');
                   },
                   icon: const Image(
                     image: AssetImage('assets/dashboard.png'),

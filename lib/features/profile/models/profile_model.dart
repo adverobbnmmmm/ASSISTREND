@@ -12,6 +12,7 @@ class ProfileModel {
   final List<int> likedPosts;
   final List<int> taggedPosts;
   final List<SocialLink> socials;
+  final List<String> interests; // Add this field
 
   ProfileModel({
     required this.name,
@@ -25,6 +26,7 @@ class ProfileModel {
     required this.likedPosts,
     required this.taggedPosts,
     required this.socials,
+    required this.interests, // Add this parameter
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -58,6 +60,10 @@ class ProfileModel {
               ?.map((social) => SocialLink.fromJson(social))
               .toList() ??
           [],
+      interests: (json['interests'] as List<dynamic>?)
+              ?.map((interest) => interest['interestId__interestName'] as String)
+              .toList() ??
+          [],
     );
   }
 
@@ -75,6 +81,7 @@ class ProfileModel {
       likedPosts: [],
       taggedPosts: [],
       socials: [],
+      interests: [], // Add this
     );
   }
 }

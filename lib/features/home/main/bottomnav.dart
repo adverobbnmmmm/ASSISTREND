@@ -1,7 +1,5 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-
-import '../notification/notificationservices.dart';
+import 'package:go_router/go_router.dart';
 
 ValueNotifier<int> indexNotifier = ValueNotifier<int>(0);
 
@@ -18,13 +16,6 @@ class _BottomNavBarState extends State<BottomNavBar> {
   @override
   void initState() {
     super.initState();
-
-    FirebaseMessaging.instance.getInitialMessage();
-    FirebaseMessaging.onMessage.listen((message) {
-      LocalNotificationService.display(message);
-    });
-
-    LocalNotificationService.storeToken();
   }
 
   @override
@@ -40,6 +31,24 @@ class _BottomNavBarState extends State<BottomNavBar> {
               currentIndex: newindex,
               onTap: (index) {
                 indexNotifier.value = index;
+                // Navigate based on the tab index
+                switch (index) {
+                  case 0:
+                    context.go('/home');
+                    break;
+                  case 1:
+                    // Search page - implement as needed
+                    break;
+                  case 2:
+                    // Create post page - implement as needed
+                    break;
+                  case 3:
+                    // Challenge page - implement as needed
+                    break;
+                  case 4:
+                    context.go('/profile');
+                    break;
+                }
               },
               items: [
                 const BottomNavigationBarItem(
@@ -68,10 +77,14 @@ class _BottomNavBarState extends State<BottomNavBar> {
                       color: newindex == 3 ? Colors.white : Colors.grey,
                     ),
                     label: ''),
-                const BottomNavigationBarItem(
-                    icon: Icon(
-                      Icons.notifications_active_sharp,
-                      size: 40,
+                BottomNavigationBarItem(
+                    icon: CircleAvatar(
+                      backgroundColor: newindex == 4 ? Colors.white : Colors.transparent,
+                      child: Icon(
+                        Icons.person,
+                        size: 40,
+                        color: newindex == 4 ? Colors.black : Colors.grey,
+                      ),
                     ),
                     label: ''),
               ]);
