@@ -157,4 +157,79 @@ class SocialApiService {
       token,
     );
   }
+
+  // Update Name
+  static Future<dynamic> updateName(int userId, String name) async {
+    final token = await Storage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+    
+    return await _makeRequest(
+      'social-service/features/update-name/',
+      {'userId': userId.toString(), 'name': name},
+      'POST',
+      token,
+    );
+  }
+
+  // Update About
+  static Future<dynamic> updateAbout(int userId, String about) async {
+    final token = await Storage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+    
+    return await _makeRequest(
+      'social-service/features/update-about/',
+      {'userId': userId.toString(), 'about': about},
+      'POST',
+      token,
+    );
+  }
+
+  // Update Emoji
+  static Future<dynamic> updateEmoji(int userId, String emoji) async {
+    final token = await Storage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+    
+    return await _makeRequest(
+      'social-service/features/update-emoji/',
+      {'userId': userId.toString(), 'emoji': emoji},
+      'POST',
+      token,
+    );
+  }
+
+  // Update Interests
+  static Future<dynamic> updateInterests(int userId, List<String> interests) async {
+    final token = await Storage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+    
+    return await _makeRequest(
+      'social-service/features/update-interests/',
+      {'userId': userId.toString(), 'interests': interests},
+      'POST',
+      token,
+    );
+  }
+
+  // Update Socials
+  static Future<dynamic> updateSocials(int userId, String platform, String url) async {
+    final token = await Storage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+    
+    return await _makeRequest(
+      'social-service/features/update-socials/',
+      {'userId': userId.toString(), 'platform': platform, 'url': url},
+      'POST',
+      token,
+    );
+  }
 }

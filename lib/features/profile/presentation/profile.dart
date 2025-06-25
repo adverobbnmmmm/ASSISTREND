@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:assistrend/features/profile/presentation/more_post.dart';
+import 'package:assistrend/features/profile/presentation/edit_profile.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/profile_providers.dart';
 import '../models/profile_model.dart';
 import 'package:assistrend/features/auth/providers/auth_provider.dart';
@@ -249,7 +251,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        context.pushNamed('editProfile', extra: profile);
+                      },
                       icon: Icon(Icons.edit, color: Colors.white),
                       iconSize: 16,
                       padding: EdgeInsets.zero,
