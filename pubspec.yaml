@@ -1,0 +1,66 @@
+name: assistrend  # Your project name (lowercase_with_underscores)
+description: A Flutter application for ASSISTREND
+version: 1.0.0+1  # Version number (adjust as needed)
+
+environment:
+  sdk: '>=3.7.0 <4.0.0'
+  flutter: '>=3.22.0'  # Add Flutter constraint if needed
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.1.0
+  shared_preferences: ^2.0.15 
+  google_sign_in: ^6.1.0
+  google_sign_in_web: ^0.12.4+4
+  url_launcher: ^6.3.0
+  carousel_slider: ^5.1.1
+  get: ^4.7.2
+  dio: ^5.8.0+1
+  go_router: ^13.0.0  # For declarative routing in Flutter
+  flutter_riverpod: ^2.5.1  # Added Riverpod for state management
+  riverpod_annotation: ^2.3.3  # For code generation
+  intl: ^0.18.0
+  # Media handling packages
+  image_picker: ^1.1.2
+  file_picker: ^10.2.0
+  video_thumbnail: ^0.5.6
+  path: ^1.8.3
+  path_provider: ^2.1.5
+  permission_handler: ^12.0.0+1
+  # Firebase packages - Commented out for Windows compatibility
+  # firebase_core: ^2.15.1
+  # firebase_auth: ^4.9.0
+  # firebase_messaging: ^14.6.7
+  # cloud_firestore: ^4.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.7
+  riverpod_generator: ^2.3.9
+  custom_lint: ^0.5.7
+  riverpod_lint: ^2.3.7
+
+dependency_overrides:
+  async: ^2.13.0
+  fake_async: ^1.3.3
+  material_color_utilities: ^0.12.0
+  # Add other packages as needed
+  
+flutter:
+  uses-material-design: true
+  assets:
+   - assets/mailbox.png
+   - assets/dashboard.png
+   - assets/comment.png
+   - assets/threewaysymbol.png
+   - assets/robot.png
+# flutter:
+#   assets:
+#     - assets/fonts/NotoSans-Regular.ttf
+#   fonts:
+#     - family: NotoSans
+#       fonts:
+#         - asset: assets/fonts/NotoSans-Regular.ttf

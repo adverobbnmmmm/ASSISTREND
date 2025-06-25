@@ -1,0 +1,6 @@
+# This file excludes certain packages from the Windows build
+
+firebase_core
+firebase_auth
+firebase_messaging
+cloud_firestore
