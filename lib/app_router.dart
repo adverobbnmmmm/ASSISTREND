@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Import the ScaffoldWithBottomNav from main.dart
 import 'main.dart';
-// Import ProfileModel for edit profile page
 import 'features/profile/models/profile_model.dart';
 
 // Screens
