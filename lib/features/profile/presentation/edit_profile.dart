@@ -232,6 +232,50 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     });
   }
 
+  // Update this reusable function for creating more rectangular gradient border buttons
+  Widget _buildGradientBorderButton(String text, VoidCallback onPressed) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8), // Changed to smaller border radius for more rectangular shape
+        gradient: const LinearGradient(
+          colors: [
+            Colors.red,
+            Colors.orange,
+            Colors.yellow,
+            Colors.green,
+            Colors.blue,
+            Colors.indigo,
+            Colors.purple,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(2), // Border thickness
+        decoration: BoxDecoration(
+          color: const Color(0xFF0A0A0A), // Match background color
+          borderRadius: BorderRadius.circular(6), // Adjusted to maintain border thickness
+        ),
+        child: TextButton(
+          onPressed: onPressed,
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+            minimumSize: Size(150, 45), // Wider minimum width for more rectangular shape
+          ),
+          child: Text(
+            text,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -390,18 +434,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         ),
         const SizedBox(height: 16),
         Center(
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-            ),
-            onPressed: _updateName,
-            child: Text('Update Name'),
-          ),
+          child: _buildGradientBorderButton('Update Name', _updateName),
         ),
       ],
     );
@@ -433,18 +466,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         ),
         const SizedBox(height: 16),
         Center(
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-            ),
-            onPressed: _updateAbout,
-            child: Text('Update About'),
-          ),
+          child: _buildGradientBorderButton('Update About', _updateAbout),
         ),
       ],
     );
@@ -480,17 +502,41 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               ),
             ),
             const SizedBox(width: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                gradient: const LinearGradient(
+                  colors: [
+                    Colors.red,
+                    Colors.orange,
+                    Colors.yellow,
+                    Colors.green,
+                    Colors.blue,
+                    Colors.indigo,
+                    Colors.purple,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
-              onPressed: _updateEmoji,
-              child: Text('Update'),
+              child: Container(
+                margin: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A0A0A),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: TextButton(
+                  onPressed: _updateEmoji,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  child: Text('Update'),
+                ),
+              ),
             ),
           ],
         ),
@@ -539,15 +585,41 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               ),
             ),
             const SizedBox(width: 16),
-            IconButton(
-              icon: Icon(Icons.add_circle, color: Colors.blue, size: 36),
-              onPressed: () {
-                if (interestController.text.trim().isNotEmpty) {
-                  _addInterest(interestController.text);
-                  interestController.clear();
-                }
-              },
-            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Colors.red,
+                    Colors.orange,
+                    Colors.yellow,
+                    Colors.green,
+                    Colors.blue,
+                    Colors.indigo,
+                    Colors.purple,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+              ),
+              padding: EdgeInsets.all(3), // border thickness
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black, // background color of button
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.add_circle, size: 36, color: Colors.white),
+                  onPressed: () {
+                    if (interestController.text.trim().isNotEmpty) {
+                      _addInterest(interestController.text);
+                      interestController.clear();
+                    }
+                  },
+                ),
+              ),
+            )
+
           ],
         ),
         const SizedBox(height: 16),
@@ -559,18 +631,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         if (interests.isNotEmpty) const SizedBox(height: 16),
         if (interests.isNotEmpty)
           Center(
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-              onPressed: _updateInterests,
-              child: Text('Update Interests'),
-            ),
+            child: _buildGradientBorderButton('Update Interests', _updateInterests),
           ),
       ],
     );
@@ -675,49 +736,71 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             ),
           ),
           const SizedBox(width: 12),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              gradient: const LinearGradient(
+                colors: [
+                  Colors.red,
+                  Colors.orange,
+                  Colors.yellow,
+                  Colors.green,
+                  Colors.blue,
+                  Colors.indigo,
+                  Colors.purple,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
-            onPressed: () async {
-              if (urlController.text.trim().isEmpty) return;
-              
-              try {
-                final authState = ref.read(authProvider);
-                final userId = authState.userId;
-                
-                if (userId == null) {
-                  throw Exception('User not authenticated');
-                }
+            child: Container(
+              margin: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A0A0A),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: TextButton(
+                onPressed: () async {
+                  if (urlController.text.trim().isEmpty) return;
+                  
+                  try {
+                    final authState = ref.read(authProvider);
+                    final userId = authState.userId;
+                    
+                    if (userId == null) {
+                      throw Exception('User not authenticated');
+                    }
 
-                await SocialApiService.updateSocials(
-                  userId,
-                  platform,
-                  urlController.text.trim(),
-                );
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$platform link updated successfully')),
-                );
-                
-                // Refresh profile data
-                await ref.read(profileProvider.notifier).fetchProfile(userId);
-                
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to update $platform link: ${e.toString()}'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: Text('Save'),
+                    await SocialApiService.updateSocials(
+                      userId,
+                      platform,
+                      urlController.text.trim(),
+                    );
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('$platform link updated successfully')),
+                    );
+                    
+                    // Refresh profile data
+                    await ref.read(profileProvider.notifier).fetchProfile(userId);
+                    
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to update $platform link: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(60, 44),
+                ),
+                child: Text('Save'),
+              ),
+            ),
           ),
         ],
       ),
