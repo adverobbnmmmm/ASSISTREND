@@ -56,6 +56,7 @@ class PlatformMediaService {
         path: 'mock_video_path.mp4',
         type: MediaType.video,
         thumbnail: 'mock_thumbnail.jpg',
+        durationMs: 30000, // 30 seconds mock duration
       );
     }
   }

@@ -129,9 +129,15 @@ class UploadNotifier extends StateNotifier<UploadState> {
         // On mobile platforms, we need to use the actual video picker
         try {
           // Use our MobileMediaPicker implementation
+          debugPrint('UploadProvider: Attempting to pick video with MobileMediaPicker');
           final mobileMedia = await MobileMediaPicker.pickVideo();
           
           if (mobileMedia != null) {
+            debugPrint('UploadProvider: Video successfully picked:');
+            debugPrint('  - Path: ${mobileMedia.path}');
+            debugPrint('  - File exists: ${mobileMedia.file?.existsSync() ?? false}');
+            debugPrint('  - Has thumbnail: ${mobileMedia.thumbnail != null}');
+            
             state = state.copyWith(
               selectedMedia: mobileMedia,
               isLoading: false,

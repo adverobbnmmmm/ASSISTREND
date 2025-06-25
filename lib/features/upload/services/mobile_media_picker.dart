@@ -45,30 +45,62 @@ class MobileMediaPicker {
   /// Pick video from camera or gallery
   static Future<UploadMedia?> pickVideo() async {
     try {
+      debugPrint('MobileMediaPicker: Opening video picker');
+      
       final XFile? pickedFile = await _imagePicker.pickVideo(
         source: ImageSource.gallery,
         maxDuration: const Duration(minutes: 5),
       );
       
       if (pickedFile == null) {
+        debugPrint('MobileMediaPicker: User canceled video selection');
         // User canceled the picker
         return null;
       }
       
+      debugPrint('MobileMediaPicker: Video picked at path: ${pickedFile.path}');
       final File file = File(pickedFile.path);
       
+      // Check file validity
+      if (!file.existsSync()) {
+        debugPrint('MobileMediaPicker: Error - Video file does not exist');
+        throw Exception('Selected video file does not exist');
+      }
+      
+      final fileSize = await file.length();
+      if (fileSize == 0) {
+        debugPrint('MobileMediaPicker: Error - Video file is empty (0 bytes)');
+        throw Exception('Selected video file is empty');
+      }
+      
+      debugPrint('MobileMediaPicker: Video file exists: ${file.existsSync()}, size: $fileSize bytes');
+      
       // Generate video thumbnail
+      debugPrint('MobileMediaPicker: Generating video thumbnail');
       final thumbnailPath = await VideoThumbnail.thumbnailFile(
         video: pickedFile.path,
         imageFormat: ImageFormat.JPEG,
         quality: 80,
+        maxHeight: 200, // Match the height of the preview card
       );
+      debugPrint('MobileMediaPicker: Thumbnail generated: $thumbnailPath');
+      
+      // Try to get video duration
+      int? durationMs;
+      try {
+        // We would ideally get the actual duration here
+        // In a real implementation, you'd use something like video_player to get duration
+        debugPrint('MobileMediaPicker: Video picked successfully');
+      } catch (e) {
+        debugPrint('Error getting video duration: $e');
+      }
       
       return UploadMedia(
         file: file,
         path: pickedFile.path,
         type: MediaType.video,
         thumbnail: thumbnailPath,
+        durationMs: durationMs,
       );
     } catch (e) {
       debugPrint('Error picking video: $e');

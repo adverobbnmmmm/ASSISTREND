@@ -12,16 +12,19 @@ class UploadMedia {
   final String? path; // Path or name representation of the media
   final MediaType type;
   final String? thumbnail;
+  final int? durationMs;  // Duration in milliseconds for videos and audio
   
   const UploadMedia({
     this.file, // Made optional to support Windows/desktop
     this.path, // Made optional for flexibility
     required this.type,
     this.thumbnail,
+    this.durationMs,
   });
 
   bool get hasFile => file != null;
   bool get hasMockPath => path != null;
+  bool get isVideoPlayable => type == MediaType.video && file != null && file!.existsSync();
 }
 
 /// Model to represent a complete post for upload
