@@ -5,6 +5,7 @@ import '../models/upload_model.dart';
 import './video_preview_player.dart';
 
 /// A widget that previews media (images, videos, audio) on both mobile and desktop
+/// Designed to match Instagram's media preview experience
 class MediaPreviewCard extends StatelessWidget {
   final UploadMedia media;
   final VoidCallback onDelete;
@@ -17,64 +18,69 @@ class MediaPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 200,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade800,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Stack(
-        children: [
-          // Media preview - will show actual image/video on mobile if available
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: _buildMediaPreview(),
-          ),
-          
-          // Delete button
-          Positioned(
-            top: 8,
-            right: 8,
-            child: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(4),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Media preview - will show actual image/video on mobile if available
+        ClipRRect(
+          borderRadius: BorderRadius.circular(0), // Instagram doesn't use rounded corners
+          child: _buildMediaPreview(),
+        ),
+        
+        // Controls overlay
+        Positioned(
+          top: 8,
+          right: 8,
+          child: Row(
+            children: [
+              // Media type indicator
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getIconForMediaType(),
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _getMediaTypeLabel(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(width: 8),
+              
+              // Delete button
+              Container(
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.6),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 20,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  onPressed: onDelete,
                 ),
               ),
-              onPressed: onDelete,
-            ),
+            ],
           ),
-          
-          // Media type label
-          Positioned(
-            bottom: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                _getMediaTypeLabel(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -108,6 +114,7 @@ class MediaPreviewCard extends StatelessWidget {
                     // No thumbnail available, try direct video player
                     return VideoPreviewPlayer(
                       videoFile: media.file!,
+                      autoPlay: true, // Auto-play for Instagram-like experience
                     );
                   }
                 } else {
@@ -134,7 +141,7 @@ class MediaPreviewCard extends StatelessWidget {
             debugPrint('MediaPreviewCard: Falling back to mock video preview');
             return _buildMockPreview();
           case MediaType.audio:
-            return _buildMockPreview(); // Always show icon for audio
+            return _buildAudioPreview(); // Styled audio preview
         }
       } catch (e) {
         debugPrint('Error in media preview: $e');
@@ -145,30 +152,86 @@ class MediaPreviewCard extends StatelessWidget {
     return _buildMockPreview();
   }
 
-  // The original mock preview with icons
+  // The Instagram-styled mock preview with icons
   Widget _buildMockPreview() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            _getIconForMediaType(),
-            size: 48,
-            color: Colors.white70,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            media.path != null 
-                ? media.path!.split('/').last // Show just the filename
-                : _getMediaTypeLabel(),
-            style: const TextStyle(color: Colors.white70),
-          ),
-        ],
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              _getIconForMediaType(),
+              size: 48,
+              color: Colors.white70,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              media.path != null 
+                  ? media.path!.split('/').last // Show just the filename
+                  : _getMediaTypeLabel(),
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  // Instagram-styled audio preview
+  Widget _buildAudioPreview() {
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade900,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.shade800, width: 3),
+              ),
+              child: const Icon(
+                Icons.audiotrack,
+                size: 60,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (media.path != null)
+              Text(
+                media.path!.split('/').last,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            if (media.durationMs != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  _formatDuration(media.durationMs!),
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  // Build a video preview with thumbnail and play button
+  // Build a video preview with thumbnail and play button - Instagram-styled
   Widget _buildVideoWithThumbnailPreview() {
     return GestureDetector(
       onTap: () {
@@ -176,7 +239,7 @@ class MediaPreviewCard extends StatelessWidget {
         debugPrint('Video thumbnail tapped');
       },
       child: Stack(
-        alignment: Alignment.center,
+        fit: StackFit.expand,
         children: [
           // Thumbnail as background
           Image.file(
@@ -186,25 +249,35 @@ class MediaPreviewCard extends StatelessWidget {
             height: double.infinity,
             errorBuilder: (_, __, ___) => _buildMockPreview(),
           ),
-          // Play button overlay
+          
+          // Instagram-like tinted overlay
           Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.play_arrow,
-              size: 40,
-              color: Colors.white.withOpacity(0.9),
+            color: Colors.black.withOpacity(0.2),
+          ),
+          
+          // Play button overlay - Instagram style
+          Center(
+            child: Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withOpacity(0.8), width: 2),
+              ),
+              child: const Icon(
+                Icons.play_arrow,
+                size: 40,
+                color: Colors.white,
+              ),
             ),
           ),
+          
           // Duration indicator if available
           if (media.durationMs != null)
             Positioned(
-              bottom: 8,
-              left: 8,
+              bottom: 12,
+              right: 12,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -226,7 +299,7 @@ class MediaPreviewCard extends StatelessWidget {
     );
   }
 
-  // Format milliseconds into a time string
+  // Format milliseconds into a time string - Instagram format
   String _formatDuration(int milliseconds) {
     final Duration duration = Duration(milliseconds: milliseconds);
     final int minutes = duration.inMinutes;
@@ -252,11 +325,11 @@ class MediaPreviewCard extends StatelessWidget {
   String _getMediaTypeLabel() {
     switch (media.type) {
       case MediaType.image:
-        return 'IMAGE';
+        return 'Photo';
       case MediaType.video:
-        return 'VIDEO';
+        return 'Video';
       case MediaType.audio:
-        return 'AUDIO';
+        return 'Audio';
     }
   }
 }

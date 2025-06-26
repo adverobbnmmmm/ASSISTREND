@@ -5,12 +5,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // Import the ScaffoldWithBottomNav from main.dart
 import 'main.dart';
+import 'features/profile/models/profile_model.dart';
 
 // Screens
 import 'assistrend_opening.dart';
 import 'assistrend_forgotpass.dart';
 import 'features/profile/presentation/profile.dart';
 import 'features/profile/presentation/more_post.dart';
+import 'features/profile/presentation/edit_profile.dart';
 import 'features/auth/presentation/assistrend_login.dart';
 import 'features/auth/presentation/assistrend_signup.dart';
 import 'features/auth/presentation/otp_screen.dart';
@@ -90,6 +92,14 @@ class AppRouter {
         path: '/more-posts',
         name: 'morePosts',
         builder: (context, state) => SeeMorePostsPage(),
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        name: 'editProfile',
+        builder: (context, state) {
+          final profile = state.extra as ProfileModel;
+          return EditProfilePage(profile: profile);
+        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
