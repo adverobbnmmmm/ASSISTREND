@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/upload_model.dart';
 import '../providers/upload_provider.dart';
@@ -143,7 +144,12 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
         if (uploadState.hasMedia)
           TextButton(
             onPressed: uploadState.isValid && !uploadState.isUploading
-                ? () => ref.read(uploadProvider.notifier).handleUpload()
+                ? () async {
+                    await ref.read(uploadProvider.notifier).handleUpload();
+                    if (context.mounted) {
+                      context.go('/home');
+                    }
+                  }
                 : null,
             child: uploadState.isUploading
                 ? const SizedBox(
@@ -170,6 +176,36 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
   
   // Instagram-style media selection screen with large buttons and grid
   Widget _buildMediaSelectionView(BuildContext context, UploadState uploadState) {
+
+  // Category selection dropdown
+  Widget _buildCategorySelection(UploadState uploadState) {
+    final notifier = ref.read(uploadProvider.notifier);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: DropdownButtonFormField<String>(
+        value: uploadState.category,
+        decoration: const InputDecoration(
+          labelText: 'Category',
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+        hint: const Text('Select a category'),
+        onChanged: (String? newValue) {
+          if (newValue != null) {
+            notifier.setCategory(newValue);
+          }
+        },
+        items: <String>['Opinion', 'Experience', 'Adventure']
+            .map<DropdownMenuItem<String>>((String value) {
+          return DropdownMenuItem<String>(
+            value: value,
+            child: Text(value),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -400,6 +436,32 @@ ref.read(uploadProvider.notifier).pickImage();
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
+              // Category selection
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: DropdownButtonFormField<String>(
+                  value: uploadState.category,
+                  decoration: const InputDecoration(
+                    labelText: 'Category',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  hint: const Text('Select a category'),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      ref.read(uploadProvider.notifier).setCategory(newValue);
+                    }
+                  },
+                  items: <String>['Opinion', 'Experience', 'Adventure']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 8),
               // Caption with profile pic like Instagram  
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

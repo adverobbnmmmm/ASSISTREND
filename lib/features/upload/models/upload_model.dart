@@ -79,6 +79,7 @@ class UploadPost {
   final String? filter;
   final Map<String, double>? adjustments;
   final Map<String, String>? metadata;
+  final String? category;
   
   const UploadPost({
     this.media,
@@ -89,6 +90,7 @@ class UploadPost {
     this.filter,
     this.adjustments,
     this.metadata,
+    this.category,
   });
 
   bool get hasMedia => media != null;
@@ -129,6 +131,10 @@ class UploadPost {
     
     if (metadata != null) {
       result['metadata'] = metadata;
+    }
+
+    if (category != null) {
+      result['category'] = category;
     }
     
     return result;

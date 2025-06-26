@@ -11,6 +11,7 @@ import '../models/upload_model.dart';
 import '../services/platform_media_service.dart';
 import '../services/mobile_media_picker.dart';
 import '../services/gallery_service.dart';
+import '../../../shared/utils/storage.dart';
 
 // Define state for upload feature
 class UploadState {
@@ -26,6 +27,7 @@ class UploadState {
   final String? location;
   final List<RecentMedia> recentMedia;
   final bool isLoadingRecentMedia;
+  final String? category;
   
   UploadState({
     this.isLoading = false,
@@ -40,6 +42,7 @@ class UploadState {
     this.location,
     this.recentMedia = const [],
     this.isLoadingRecentMedia = false,
+    this.category,
   });
 
   UploadState copyWith({
@@ -55,6 +58,7 @@ class UploadState {
     String? location,
     List<RecentMedia>? recentMedia,
     bool? isLoadingRecentMedia,
+    String? category,
   }) {
     return UploadState(
       isLoading: isLoading ?? this.isLoading,
@@ -69,6 +73,7 @@ class UploadState {
       location: location ?? this.location,
       recentMedia: recentMedia ?? this.recentMedia,
       isLoadingRecentMedia: isLoadingRecentMedia ?? this.isLoadingRecentMedia,
+      category: category ?? this.category,
     );
   }
 
@@ -192,6 +197,11 @@ class UploadNotifier extends StateNotifier<UploadState> {
     updatedAdjustments[adjustment] = value;
     
     state = state.copyWith(adjustments: updatedAdjustments);
+  }
+
+  // Set category
+  void setCategory(String category) {
+    state = state.copyWith(category: category);
   }
   
   // Pick image from camera or gallery
@@ -400,9 +410,21 @@ class UploadNotifier extends StateNotifier<UploadState> {
         if (mediaUrl == null) {
           throw Exception('Failed to upload media to Cloudinary.');
         }
-          
-      }
 
+      }
+      final url='http://10.0.2.2:8001';
+      await http.post(
+        Uri.parse('${url}/api/social-service/features/uploadPost/'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'userId': await Storage.getUserId(), // Get userId from storage
+          'caption': state.caption,
+          'imageUrl': mediaUrl,
+          'category': state.category,
+        }),
+      );
       // Simulate API call
       debugPrint('Uploading: Caption: ${state.caption}, Media URL: $mediaUrl, Filter: ${state.selectedFilter}, Adjustments: ${state.adjustments}, Tags: ${state.tags}, Location: ${state.location}');
       await Future.delayed(const Duration(seconds: 2)); // Simulate network delay
