@@ -204,63 +204,6 @@ class UploadNotifier extends StateNotifier<UploadState> {
     state = state.copyWith(category: category);
   }
   
-  // Pick image from camera or gallery
-  // Future<void> pickImage(bool fromCamera) async {
-  //   try {
-  //     state = state.copyWith(isLoading: true, error: null);
-      
-  //     debugPrint('UploadProvider: Attempting to pick image, fromCamera=${fromCamera}');
-      
-  //     // Use our platform-specific service 
-  //     final media = await _mediaService.pickImage(fromCamera: fromCamera);
-      
-  //     if (media != null) {
-  //       // For desktop/mock platforms, just use the mock media
-  //       debugPrint('UploadProvider: Received media from platform service');
-  //       state = state.copyWith(
-  //         selectedMedia: media,
-  //         isLoading: false,
-  //       );
-  //     } else {
-  //       // On mobile platforms, we need to actually use image_picker
-  //       // since platform service returned null
-  //       try {
-  //         // Use our MobileMediaPicker implementation for actual mobile devices
-  //         debugPrint('UploadProvider: Calling MobileMediaPicker.pickImage()');
-  //         final mobileMedia = await MobileMediaPicker.pickImage();
-          
-  //         if (mobileMedia != null) {
-  //           debugPrint('UploadProvider: Received media with path: ${mobileMedia.path}');
-  //           debugPrint('UploadProvider: File exists: ${mobileMedia.file?.existsSync()}');
-            
-  //           state = state.copyWith(
-  //             selectedMedia: mobileMedia,
-  //             isLoading: false,
-  //           );
-  //         } else {
-  //           // User canceled the picker
-  //           debugPrint('UploadProvider: Image selection canceled by user');
-  //           state = state.copyWith(isLoading: false);
-  //         }
-  //       } catch (pickerError) {
-  //         debugPrint('Error using image picker: $pickerError');
-  //         state = state.copyWith(
-  //           error: 'Failed to pick image: $pickerError',
-  //           isLoading: false,
-  //         );
-  //       }
-  //     }
-  //   } catch (e) {
-  //     debugPrint('UploadProvider: Exception during image picking: $e');
-  //     state = state.copyWith(
-  //       error: 'Failed to pick image: $e',
-  //       isLoading: false,
-  //     );
-  //   }
-  // }
-
-
-  
   // Pick image
   Future<void> pickImage({bool fromCamera = false}) async {
     try {
@@ -427,7 +370,6 @@ class UploadNotifier extends StateNotifier<UploadState> {
       );
       // Simulate API call
       debugPrint('Uploading: Caption: ${state.caption}, Media URL: $mediaUrl, Filter: ${state.selectedFilter}, Adjustments: ${state.adjustments}, Tags: ${state.tags}, Location: ${state.location}');
-      await Future.delayed(const Duration(seconds: 2)); // Simulate network delay
 
       state = state.copyWith(isUploading: false, uploadSuccess: true);
       debugPrint('Upload successful!');

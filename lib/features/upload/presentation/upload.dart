@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../models/upload_model.dart';
 import '../providers/upload_provider.dart';
 import '../services/permission_service.dart';
 import '../widgets/media_preview_card.dart';
-import '../widgets/simple_file_input.dart';
 import '../widgets/recent_media_thumbnail.dart';
 
 class UploadPage extends ConsumerStatefulWidget {
@@ -86,15 +84,10 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
           ref.watch(uploadProvider.select((state) => state.uploadSuccess));
           ref.watch(uploadProvider.select((state) => state.error));
 
-          // Use a post-frame callback to show SnackBar or navigate
+          // Use a post-frame callback to show SnackBar only (navigation handled in button)
           WidgetsBinding.instance.addPostFrameCallback((_) {
             final uploadState = ref.read(uploadProvider);
-            if (uploadState.uploadSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Post uploaded successfully!')), 
-              );
-              Navigator.of(context).pop(); // Go back after successful upload
-            } else if (uploadState.error != null) {
+            if (uploadState.error != null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Upload failed: ${uploadState.error}')), 
               );
@@ -145,9 +138,33 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
           TextButton(
             onPressed: uploadState.isValid && !uploadState.isUploading
                 ? () async {
-                    await ref.read(uploadProvider.notifier).handleUpload();
-                    if (context.mounted) {
-                      context.go('/home');
+                    try {
+                      await ref.read(uploadProvider.notifier).handleUpload();
+                      
+                      // Check if upload was successful
+                      final finalState = ref.read(uploadProvider);
+                      if (finalState.uploadSuccess && context.mounted) {
+                        // Show success message
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Post uploaded successfully!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        
+                        // Clear the upload success state by resetting
+                        ref.read(uploadProvider.notifier).reset();
+                        
+                        // Navigate to home using pushReplacement to avoid stack issues
+                        context.pushReplacement('/home');
+                      }
+                    } catch (e) {
+                      print("Upload failed: $e");
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Upload failed: $e')),
+                        );
+                      }
                     }
                   }
                 : null,
@@ -177,35 +194,6 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
   // Instagram-style media selection screen with large buttons and grid
   Widget _buildMediaSelectionView(BuildContext context, UploadState uploadState) {
 
-  // Category selection dropdown
-  Widget _buildCategorySelection(UploadState uploadState) {
-    final notifier = ref.read(uploadProvider.notifier);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: DropdownButtonFormField<String>(
-        value: uploadState.category,
-        decoration: const InputDecoration(
-          labelText: 'Category',
-          border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        ),
-        hint: const Text('Select a category'),
-        onChanged: (String? newValue) {
-          if (newValue != null) {
-            notifier.setCategory(newValue);
-          }
-        },
-        items: <String>['Opinion', 'Experience', 'Adventure']
-            .map<DropdownMenuItem<String>>((String value) {
-          return DropdownMenuItem<String>(
-            value: value,
-            child: Text(value),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -221,7 +209,9 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
           ),
           const SizedBox(height: 24),
           // Instagram-style media options
-          Row(
+            SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child:Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _buildMediaSelectionCard(
@@ -230,7 +220,7 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
                 onTap: () async {
                   final hasPermission = await PermissionService.requestCameraPermission(context);
                   if (hasPermission && context.mounted) {
-ref.read(uploadProvider.notifier).pickImage();
+                    ref.read(uploadProvider.notifier).pickImage();
                   }
                 },
               ),
@@ -266,6 +256,7 @@ ref.read(uploadProvider.notifier).pickImage();
               ),
             ],
           ),
+      ),
           const SizedBox(height: 32),
           
           // Recent photos from gallery (now showing actual photos)
