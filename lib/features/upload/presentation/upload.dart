@@ -40,13 +40,13 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
   ];
   
   // Instagram-like editing tabs
-  final List<String> _editTabs = ['Filter', 'Edit'];
+  final List<String> _editTabs = ['Post Options'];
   
   @override
   void initState() {
     super.initState();
     _captionController = TextEditingController();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 1, vsync: this);
     
 
 
@@ -124,16 +124,7 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
         },
       ),
       actions: [
-        if (uploadState.hasMedia)
-          IconButton(
-            onPressed: () {
-              // Go to next step - caption
-              setState(() {
-                // In a real implementation, this might navigate to another step
-              });
-            },
-            icon: const Icon(Icons.arrow_forward, color: Colors.blue),
-          ),
+        
         if (uploadState.hasMedia)
           TextButton(
             onPressed: uploadState.isValid && !uploadState.isUploading
@@ -409,16 +400,7 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
         ),
         
         // Filter or Edit content
-        if (!uploadState.isUploading)
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildFilterView(),
-                _buildEditView(),
-              ],
-            ),
-          ),
+       
         
         const Divider(height: 1),
         
@@ -566,63 +548,6 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
             ),
           ),
       ],
-    );
-  }
-  
-  // Instagram-style edit view with adjustment options
-  Widget _buildEditView() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildAdjustmentOption('Brightness', Icons.brightness_6, 50),
-          _buildAdjustmentOption('Contrast', Icons.contrast, 50),
-          _buildAdjustmentOption('Structure', Icons.grain, 50),
-          _buildAdjustmentOption('Warmth', Icons.whatshot, 50),
-          _buildAdjustmentOption('Saturation', Icons.gradient, 50),
-          _buildAdjustmentOption('Color', Icons.colorize, 50),
-          _buildAdjustmentOption('Fade', Icons.blur_on, 50),
-          _buildAdjustmentOption('Highlights', Icons.highlight, 50),
-          _buildAdjustmentOption('Shadows', Icons.opacity, 50),
-          _buildAdjustmentOption('Vignette', Icons.vignette, 50),
-          _buildAdjustmentOption('Tilt Shift', Icons.blur_circular, 50),
-          _buildAdjustmentOption('Sharpen', Icons.details, 50),
-        ],
-      ),
-    );
-  }
-  
-  // Instagram-style adjustment option
-  Widget _buildAdjustmentOption(String name, IconData icon, double value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 24),
-          const SizedBox(width: 16),
-          Text(name, style: const TextStyle(fontWeight: FontWeight.w500)),
-          const SizedBox(width: 16),
-          Expanded(
-            child: SliderTheme(
-              data: SliderThemeData(
-                trackHeight: 2,
-                activeTrackColor: Colors.blue,
-                inactiveTrackColor: Colors.grey.shade700,
-                thumbColor: Colors.white,
-              ),
-              child: Slider(
-                value: value,
-                min: 0,
-                max: 100,
-                onChanged: (newValue) {
-                  // Would apply adjustment here
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
   
