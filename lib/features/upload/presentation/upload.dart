@@ -457,12 +457,6 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Profile image
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.grey.shade700,
-                    child: const Icon(Icons.person, color: Colors.white),
-                  ),
                   const SizedBox(width: 12),
                   
                   // Caption text field
@@ -484,12 +478,9 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
               ),
               
               // Instagram-like additional options
-              const SizedBox(height: 16),
-              _buildOptionRow(Icons.location_on_outlined, 'Add Location', () {}),
+            
               const Divider(height: 1),
               _buildOptionRow(Icons.tag_faces, 'Tag People', () {}),
-              const Divider(height: 1),
-              _buildOptionRow(Icons.visibility_outlined, 'Audience', () {}),
               
               // Success message
               if (uploadState.uploadSuccess)
