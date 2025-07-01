@@ -43,12 +43,12 @@ class MobileMediaPicker {
   }
   
   /// Pick video from camera or gallery
-  static Future<UploadMedia?> pickVideo() async {
+  static Future<UploadMedia?> pickVideo({bool fromCamera = false}) async {
     try {
-      debugPrint('MobileMediaPicker: Opening video picker');
+      debugPrint('MobileMediaPicker: Opening video picker from ${fromCamera ? "camera" : "gallery"}');
       
       final XFile? pickedFile = await _imagePicker.pickVideo(
-        source: ImageSource.gallery,
+        source: fromCamera ? ImageSource.camera : ImageSource.gallery,
         maxDuration: const Duration(minutes: 5),
       );
       

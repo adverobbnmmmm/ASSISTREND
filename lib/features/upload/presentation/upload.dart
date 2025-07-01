@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../providers/upload_provider.dart';
 import '../services/permission_service.dart';
 import '../widgets/media_preview_card.dart';
-import '../widgets/recent_media_thumbnail.dart';
 
 class UploadPage extends ConsumerStatefulWidget {
   const UploadPage({Key? key}) : super(key: key);
@@ -158,154 +157,99 @@ class _UploadPageState extends ConsumerState<UploadPage> {
     );
   }
   
-  // Instagram-style media selection screen with large buttons and grid
+  // Instagram-style media selection screen with large buttons
   Widget _buildMediaSelectionView(BuildContext context, UploadState uploadState) {
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Create New Post',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Create New Post',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          // Instagram-style media options
-            SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child:Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildMediaSelectionCard(
-                title: 'Photo',
-                icon: Icons.camera_alt,
-                onTap: () async {
-                  final hasPermission = await PermissionService.requestCameraPermission(context);
-                  if (hasPermission && context.mounted) {
-                    ref.read(uploadProvider.notifier).pickImage();
-                  }
-                },
+            const SizedBox(height: 8),
+            const Text(
+              'Choose how you want to create your post',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
               ),
-              _buildMediaSelectionCard(
-                title: 'Video',
-                icon: Icons.videocam,
-                onTap: () async {
-                  final hasPermission = await PermissionService.requestCameraPermission(context); // Assuming camera permission covers video
-                  if (hasPermission && context.mounted) {
-                    ref.read(uploadProvider.notifier).pickVideo();
-                  }
-                },
-              ),
-              _buildMediaSelectionCard(
-                title: 'Gallery',
-                icon: Icons.photo_library,
-                onTap: () async {
-                  final hasPermission = await PermissionService.requestStoragePermission(context);
-                  if (hasPermission && context.mounted) {
-                    ref.read(uploadProvider.notifier).pickImage();
-                  }
-                },
-              ),
-              _buildMediaSelectionCard(
-                title: 'Video',
-                icon: Icons.videocam,
-                onTap: () async {
-                  final hasPermission = await PermissionService.requestVideoPermission(context);
-                  if (hasPermission && context.mounted) {
-                    ref.read(uploadProvider.notifier).pickVideo();
-                  }
-                },
-              ),
-            ],
-          ),
-      ),
-          const SizedBox(height: 32),
-          
-          // Recent photos from gallery (now showing actual photos)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            // Instagram-style media options
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Recent Photos',
-                      style: TextStyle(
-                        fontSize: 16, 
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    
-                    // Refresh button
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () {
-                        ref.read(uploadProvider.notifier).loadRecentMedia();
-                      },
-                      tooltip: 'Refresh gallery',
-                    ),
-                  ],
+                _buildMediaSelectionCard(
+                  title: 'Camera',
+                  icon: Icons.camera_alt,
+                  onTap: () async {
+                    final hasPermission = await PermissionService.requestCameraPermission(context);
+                    if (hasPermission && context.mounted) {
+                      ref.read(uploadProvider.notifier).pickImage(fromCamera: true);
+                    }
+                  },
                 ),
-                const SizedBox(height: 8),
-                
-                // Gallery content
-                if (uploadState.isLoadingRecentMedia)
-                  const Expanded(
-                    child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                else
-                  Expanded(
-                    child: uploadState.recentMedia.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No recent photos found',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          )
-                        : GridView.builder(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              crossAxisSpacing: 2,
-                              mainAxisSpacing: 2,
-                            ),
-                            itemCount: uploadState.recentMedia.length,
-                            itemBuilder: (context, index) {
-                              final media = uploadState.recentMedia[index];
-                              return RecentMediaThumbnail(
-                                media: media,
-                                onTap: () async {
-                                  final hasPermission = await PermissionService.requestStoragePermission(context);
-                                  if (hasPermission && context.mounted) {
-                                    await ref.read(uploadProvider.notifier).selectRecentMedia(media);
-                                  }
-                                },
-                              );
-                            },
-                          ),
-                  ),
+                _buildMediaSelectionCard(
+                  title: 'Video',
+                  icon: Icons.videocam,
+                  onTap: () async {
+                    final hasPermission = await PermissionService.requestCameraPermission(context);
+                    if (hasPermission && context.mounted) {
+                      ref.read(uploadProvider.notifier).pickVideo(fromCamera: true);
+                    }
+                  },
+                ),
               ],
             ),
-          ),
-          
-          // Error message
-          if (uploadState.error != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-              child: Text(
-                uploadState.error!,
-                style: TextStyle(color: Colors.red.shade300),
-                textAlign: TextAlign.center,
-              ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildMediaSelectionCard(
+                  title: 'Gallery',
+                  icon: Icons.photo_library,
+                  onTap: () async {
+                    final hasPermission = await PermissionService.requestStoragePermission(context);
+                    if (hasPermission && context.mounted) {
+                      ref.read(uploadProvider.notifier).pickImage(fromCamera: false);
+                    }
+                  },
+                ),
+                _buildMediaSelectionCard(
+                  title: 'Gallery Video',
+                  icon: Icons.video_library,
+                  onTap: () async {
+                    final hasPermission = await PermissionService.requestStoragePermission(context);
+                    if (hasPermission && context.mounted) {
+                      ref.read(uploadProvider.notifier).pickVideo(fromCamera: false);
+                    }
+                  },
+                ),
+              ],
             ),
-        ],
+            const SizedBox(height: 24),
+            
+            // Error message
+            if (uploadState.error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Text(
+                  uploadState.error!,
+                  style: TextStyle(color: Colors.red.shade300),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -320,8 +264,8 @@ class _UploadPageState extends ConsumerState<UploadPage> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: 100,
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        width: 120,
+        height: 120,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [Colors.blue.shade700, Colors.purple.shade700],
@@ -329,9 +273,16 @@ class _UploadPageState extends ConsumerState<UploadPage> {
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 40, color: Colors.white),
             const SizedBox(height: 12),

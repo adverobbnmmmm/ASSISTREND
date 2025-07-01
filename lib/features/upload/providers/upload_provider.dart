@@ -260,11 +260,11 @@ class UploadNotifier extends StateNotifier<UploadState> {
   }
 
   // Pick video
-  Future<void> pickVideo() async {
+  Future<void> pickVideo({bool fromCamera = false}) async {
     try {
       state = state.copyWith(isLoading: true, error: null);
 
-      debugPrint('UploadProvider: Attempting to pick video');
+      debugPrint('UploadProvider: Attempting to pick video from ${fromCamera ? "camera" : "gallery"}');
 
       // Use platform-specific implementation
       final media = await _mediaService.pickVideo();
@@ -281,7 +281,7 @@ class UploadNotifier extends StateNotifier<UploadState> {
         try {
           // Use our MobileMediaPicker implementation
           debugPrint('UploadProvider: Attempting to pick video with MobileMediaPicker');
-          final mobileMedia = await MobileMediaPicker.pickVideo();
+          final mobileMedia = await MobileMediaPicker.pickVideo(fromCamera: fromCamera);
 
           if (mobileMedia != null) {
             debugPrint('UploadProvider: Video successfully picked:');
