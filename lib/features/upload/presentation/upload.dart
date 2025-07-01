@@ -17,38 +17,14 @@ class UploadPage extends ConsumerStatefulWidget {
 
 
 
-class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProviderStateMixin {
+class _UploadPageState extends ConsumerState<UploadPage> {
   late TextEditingController _captionController;
   final FocusNode _captionFocus = FocusNode();
-  late TabController _tabController;
-  
-  // Instagram-like filter options with names and icons
-  int _selectedFilterIndex = 0;
-  final List<Map<String, dynamic>> _filterOptions = [
-    {'name': 'Normal', 'icon': Icons.auto_fix_off},
-    {'name': 'Clarendon', 'icon': Icons.auto_awesome},
-    {'name': 'Gingham', 'icon': Icons.grain},
-    {'name': 'Moon', 'icon': Icons.nights_stay},
-    {'name': 'Lark', 'icon': Icons.flare},
-    {'name': 'Reyes', 'icon': Icons.blur_on},
-    {'name': 'Juno', 'icon': Icons.tonality},
-    {'name': 'Slumber', 'icon': Icons.bedtime},
-    {'name': 'Crema', 'icon': Icons.filter_vintage},
-    {'name': 'Ludwig', 'icon': Icons.monochrome_photos},
-    {'name': 'Aden', 'icon': Icons.wb_sunny},
-    {'name': 'Perpetua', 'icon': Icons.filter_drama},
-  ];
-  
-  // Instagram-like editing tabs
-  final List<String> _editTabs = ['Post Options'];
   
   @override
   void initState() {
     super.initState();
     _captionController = TextEditingController();
-    _tabController = TabController(length: 1, vsync: this);
-    
-
 
     // Reset upload state when entering the page
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -60,7 +36,6 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
   void dispose() {
     _captionController.dispose();
     _captionFocus.dispose();
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -119,7 +94,8 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
           if (uploadState.hasMedia) {
             _showDiscardConfirmation();
           } else {
-            Navigator.of(context).pop();
+            // No media selected, safe to go back to home
+            context.go('/home');
           }
         },
       ),
@@ -373,7 +349,7 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
     );
   }
   
-  // Instagram-style post creation view with media preview, tabs for filters and edit
+  // Instagram-style post creation view with media preview and caption
   Widget _buildPostCreationView(UploadState uploadState, BuildContext context, double screenWidth) {
     return Column(
       children: [
@@ -390,210 +366,96 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
           ),
         ),
         
-        // Instagram-style tab bar
-        TabBar(
-          controller: _tabController,
-          tabs: _editTabs.map((tab) => Tab(text: tab)).toList(),
-          labelColor: Colors.blue,
-          indicatorColor: Colors.blue,
-          unselectedLabelColor: Colors.grey,
-        ),
-        
-        // Filter or Edit content
-       
-        
         const Divider(height: 1),
         
-        // Caption and options section at the bottom
-        Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Category selection
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: DropdownButtonFormField<String>(
-                  value: uploadState.category,
-                  decoration: const InputDecoration(
-                    labelText: 'Category',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  hint: const Text('Select a category'),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      ref.read(uploadProvider.notifier).setCategory(newValue);
-                    }
-                  },
-                  items: <String>['Opinion', 'Experience', 'Adventure']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Caption with profile pic like Instagram  
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(width: 12),
-                  
-                  // Caption text field
-                  Expanded(
-                    child: TextField(
-                      controller: _captionController,
-                      focusNode: _captionFocus,
-                      decoration: const InputDecoration(
-                        hintText: 'Write a caption...',
-                        border: InputBorder.none,
-                      ),
-                      style: const TextStyle(fontSize: 15),
-                      maxLines: 3,
-                      minLines: 1,
-                      onChanged: (value) => ref.read(uploadProvider.notifier).setCaption(value),
-                    ),
-                  ),
-                ],
-              ),
-              
-              // Instagram-like additional options
-            
-              const Divider(height: 1),
-              _buildOptionRow(Icons.tag_faces, 'Tag People', () {}),
-              
-              // Success message
-              if (uploadState.uploadSuccess)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12.0),
-                  margin: const EdgeInsets.only(top: 16.0),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8.0),
-                    border: Border.all(color: Colors.green.shade300),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.green),
-                      SizedBox(width: 8),
-                      Text(
-                        'Post shared successfully!',
-                        style: TextStyle(color: Colors.green),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-  
-  // Instagram-style filter view with a horizontal carousel
-  Widget _buildFilterView() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          height: 110,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-            itemCount: _filterOptions.length,
-            itemBuilder: (context, index) {
-              return _buildFilterOption(index);
-            },
-          ),
-        ),
-        
-        // Filter intensity slider (for selected filter)
-        if (_selectedFilterIndex > 0)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        // Caption and options section
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _filterOptions[_selectedFilterIndex]['name'],
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                // Category selection
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: DropdownButtonFormField<String>(
+                    value: uploadState.category,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
-                    const Text('100%'),
-                  ],
+                    hint: const Text('Select a category'),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        ref.read(uploadProvider.notifier).setCategory(newValue);
+                      }
+                    },
+                    items: <String>['Opinion', 'Experience', 'Adventure']
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
                 ),
                 const SizedBox(height: 8),
-                SliderTheme(
-                  data: SliderThemeData(
-                    trackHeight: 2,
-                    activeTrackColor: Colors.blue,
-                    inactiveTrackColor: Colors.grey.shade700,
-                    thumbColor: Colors.white,
-                  ),
-                  child: Slider(
-                    value: 100,
-                    min: 0,
-                    max: 100,
-                    onChanged: (value) {
-                      // Would apply filter with intensity here
-                    },
-                  ),
+                // Caption with profile pic like Instagram  
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(width: 12),
+                    
+                    // Caption text field
+                    Expanded(
+                      child: TextField(
+                        controller: _captionController,
+                        focusNode: _captionFocus,
+                        decoration: const InputDecoration(
+                          hintText: 'Write a caption...',
+                          border: InputBorder.none,
+                        ),
+                        style: const TextStyle(fontSize: 15),
+                        maxLines: 3,
+                        minLines: 1,
+                        onChanged: (value) => ref.read(uploadProvider.notifier).setCaption(value),
+                      ),
+                    ),
+                  ],
                 ),
+                
+                // Instagram-like additional options
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                _buildOptionRow(Icons.tag_faces, 'Tag People', () {}),
+                
+                // Success message
+                if (uploadState.uploadSuccess)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12.0),
+                    margin: const EdgeInsets.only(top: 16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8.0),
+                      border: Border.all(color: Colors.green.shade300),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green),
+                        SizedBox(width: 8),
+                        Text(
+                          'Post shared successfully!',
+                          style: TextStyle(color: Colors.green),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
-      ],
-    );
-  }
-  
-  // Instagram-style filter option
-  Widget _buildFilterOption(int index) {
-    final isSelected = _selectedFilterIndex == index;
-    
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedFilterIndex = index;
-        });
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected ? Colors.blue.shade700 : Colors.grey.shade800,
-                border: isSelected 
-                  ? Border.all(color: Colors.white, width: 2) 
-                  : null,
-              ),
-              child: Icon(
-                _filterOptions[index]['icon'],
-                color: Colors.white, 
-                size: 30,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _filterOptions[index]['name'],
-              style: TextStyle(
-                fontSize: 12, 
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Colors.blue : null,
-              ),
-            ),
-          ],
         ),
-      ),
+      ],
     );
   }
   
@@ -633,8 +495,8 @@ class _UploadPageState extends ConsumerState<UploadPage> with SingleTickerProvid
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Close dialog
+              context.go('/home'); // Navigate to home instead of popping twice
             },
             child: const Text('Discard', style: TextStyle(color: Colors.red)),
           ),
