@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   static const String baseUrl = 'http://10.0.2.2:8000/api/'; 
+  static const String socialServiceUrl = 'http://10.0.2.2:8001/api/social-service/';
 
   static Future<dynamic> _makeRequest(
     String endpoint,
@@ -167,5 +168,26 @@ class ApiService {
       'POST',
       null,
     );
+  }
+
+  // Get Posts Feed from Social Service
+  static Future<List<dynamic>> getPostsFeed() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${socialServiceUrl}features/getPostUserFeed'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final List<dynamic> posts = jsonDecode(response.body);
+        return posts;
+      } else {
+        throw Exception('Failed to load posts: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to fetch posts: $e');
+    }
   }
 }
