@@ -1,3 +1,4 @@
+import 'package:assistrend/features/chat/presentation/chat_home_page.dart';
 import 'package:assistrend/features/home/presentation/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -24,9 +25,13 @@ class AppRouter {
   AppRouter._();
 
   // Create a key for the navigator
-  static final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
-  static final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
-  
+  static final _rootNavigatorKey = GlobalKey<NavigatorState>(
+    debugLabel: 'root',
+  );
+  static final _shellNavigatorKey = GlobalKey<NavigatorState>(
+    debugLabel: 'shell',
+  );
+
   /// The go router configuration used for routing
   static final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -64,7 +69,7 @@ class AppRouter {
           return OTPScreen(email: email);
         },
       ),
-      
+
       // Main app routes (protected, with bottom navigation)
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
@@ -79,15 +84,21 @@ class AppRouter {
             path: '/profile',
             name: 'profile',
             builder: (context, state) => ProfilePage(),
-          ),          GoRoute(
+          ),
+          GoRoute(
             path: '/upload',
             name: 'upload',
             builder: (context, state) => const UploadPage(),
           ),
         ],
       ),
-      
+
       // Routes without bottom navigation
+      GoRoute(
+        path: '/chat',
+        name: 'chat',
+        builder: (context, state) => const ChatHomePage(),
+      ),
       GoRoute(
         path: '/more-posts',
         name: 'morePosts',
@@ -103,34 +114,36 @@ class AppRouter {
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text('Page not found: ${state.uri.path}'),
-      ),
+      body: Center(child: Text('Page not found: ${state.uri.path}')),
     ),
   );
 
   /// Handles authentication redirects
-  static Future<String?> _handleRedirect(BuildContext context, GoRouterState state) async {
+  static Future<String?> _handleRedirect(
+    BuildContext context,
+    GoRouterState state,
+  ) async {
     try {
       // Get current auth status
       final prefs = await SharedPreferences.getInstance();
       final isLoggedIn = prefs.getString('access_token') != null;
-      final isOnAuthPage = state.matchedLocation == '/login' || 
-                          state.matchedLocation == '/signup' || 
-                          state.matchedLocation == '/forgot-password' ||
-                          state.matchedLocation == '/otp-verification';
+      final isOnAuthPage =
+          state.matchedLocation == '/login' ||
+          state.matchedLocation == '/signup' ||
+          state.matchedLocation == '/forgot-password' ||
+          state.matchedLocation == '/otp-verification';
       final isOnOpeningPage = state.matchedLocation == '/';
-      
+
       // If not logged in and trying to access protected routes
       if (!isLoggedIn && !isOnAuthPage && !isOnOpeningPage) {
         return '/login';
       }
-      
+
       // If logged in and trying to access auth pages
       if (isLoggedIn && isOnAuthPage) {
         return '/home';
       }
-      
+
       // No redirect needed
       return null;
     } catch (e) {
