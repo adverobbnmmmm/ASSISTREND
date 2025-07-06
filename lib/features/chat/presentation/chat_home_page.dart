@@ -1,15 +1,17 @@
+import 'package:assistrend/features/home/main/mainpage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../application/providers/chat_provider.dart';
 import '../../chat/domain/models/chat_models.dart';
 
-/// This widget displays the list of friends and groups the user can chat with.
+/// Widget displaying the list of friends and groups.
 class ChatHomePage extends ConsumerWidget {
   const ChatHomePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the provider that loads chat data.
+    // Watch the chatProvider to get async data.
     final chatAsync = ref.watch(chatProvider);
 
     return Scaffold(
@@ -18,15 +20,19 @@ class ChatHomePage extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.of(context).pop(); // Back to main home page
+            context.go('/home');
           },
         ),
       ),
       body: chatAsync.when(
+        // While loading, show spinner
         loading: () => const Center(child: CircularProgressIndicator()),
+
+        // If error, display error message
         error: (err, stack) => Center(child: Text('Error: $err')),
+
+        // If data loaded
         data: (data) {
-          // NO .fromJson() here—these are already objects
           final friends = data['friends'] as List<Friend>;
           final groups = data['groups'] as List<ChatGroup>;
 
@@ -36,6 +42,7 @@ class ChatHomePage extends ConsumerWidget {
             },
             child: ListView(
               children: [
+                // Show Friends if any
                 if (friends.isNotEmpty) ...[
                   const Padding(
                     padding: EdgeInsets.all(8.0),
@@ -49,17 +56,35 @@ class ChatHomePage extends ConsumerWidget {
                   ),
                   ...friends.map(
                     (friend) => ListTile(
-                      leading: const Icon(Icons.person),
-                      title: Text(friend.username),
+                      leading:
+                          friend.profilePicture != null &&
+                              friend.profilePicture!.isNotEmpty
+                          ? CircleAvatar(
+                              radius: 24,
+                              backgroundImage: NetworkImage(
+                                // Use the absolute URL
+                                'http://10.0.2.2:8002${friend.profilePicture}',
+                              ),
+                            )
+                          : const CircleAvatar(
+                              radius: 24,
+                              child: Icon(Icons.person),
+                            ),
+                      title: Text(
+                        friend.name.isNotEmpty ? friend.name : 'Unnamed',
+                        style: const TextStyle(fontSize: 16),
+                      ),
                       onTap: () {
+                        // TODO: navigate to chat page
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Tapped ${friend.username}')),
+                          SnackBar(content: Text('Tapped ${friend.name}')),
                         );
-                        // Later: navigate to chat page
                       },
                     ),
                   ),
                 ],
+
+                // Show Groups if any
                 if (groups.isNotEmpty) ...[
                   const Padding(
                     padding: EdgeInsets.all(8.0),
@@ -73,18 +98,25 @@ class ChatHomePage extends ConsumerWidget {
                   ),
                   ...groups.map(
                     (group) => ListTile(
-                      leading: const Icon(Icons.group),
-                      title: Text(group.name),
+                      leading: const CircleAvatar(
+                        radius: 24,
+                        child: Icon(Icons.group),
+                      ),
+                      title: Text(
+                        group.name,
+                        style: const TextStyle(fontSize: 16),
+                      ),
                       onTap: () {
+                        // TODO: navigate to group chat
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Tapped ${group.name}')),
                         );
-                        // Later: navigate to group chat
                       },
                     ),
                   ),
                 ],
-                // Optionally, a message if there are no friends or groups
+
+                // Show fallback if no friends or groups
                 if (friends.isEmpty && groups.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(20.0),
