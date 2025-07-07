@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'main.dart';
 import 'features/profile/models/profile_model.dart';
+import 'features/search/presentation/search_page.dart';
 
 // Screens
 import 'assistrend_opening.dart';
@@ -72,6 +73,11 @@ class AppRouter {
             path: '/home',
             name: 'home',
             builder: (context, state) => HomePage(),
+          ),
+          GoRoute(
+            path: '/search',
+            name: 'search',
+            builder: (context, state) => const SearchPage(),
           ),
           GoRoute(
             path: '/profile',

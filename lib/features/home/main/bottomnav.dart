@@ -37,7 +37,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                     context.go('/home');
                     break;
                   case 1:
-                    // Search page - implement as needed
+                    context.go('/search');
                     break;
                   case 2:
                     // Create post page - implement as needed
