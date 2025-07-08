@@ -1,5 +1,3 @@
-// chat_message.dart
-
 class ChatMessage {
   final int id;
   final int senderId;
@@ -8,6 +6,7 @@ class ChatMessage {
   final String content;
   final DateTime timestamp;
   final bool isMe;
+  final String? imageUrl; // ✅ NEW
 
   ChatMessage({
     required this.id,
@@ -17,6 +16,7 @@ class ChatMessage {
     required this.content,
     required this.timestamp,
     required this.isMe,
+    this.imageUrl, // ✅ NEW
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json, int currentUserId) {
@@ -28,6 +28,7 @@ class ChatMessage {
       content: json['content'],
       timestamp: DateTime.parse(json['timestamp']),
       isMe: json['sender_id'] == currentUserId,
+      imageUrl: json['image'], // ✅ NEW (matches backend field)
     );
   }
 
@@ -38,5 +39,6 @@ class ChatMessage {
         if (groupId != null) 'group_id': groupId,
         'content': content,
         'timestamp': timestamp.toIso8601String(),
+        if (imageUrl != null) 'image': imageUrl, // ✅ NEW
       };
 }

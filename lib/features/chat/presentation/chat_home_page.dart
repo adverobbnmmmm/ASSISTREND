@@ -1,12 +1,16 @@
 import 'dart:convert';
 import 'package:assistrend/features/chat/utils/chat_cache.dart';
+import 'package:assistrend/features/chat/utils/message_cache.dart';
+import 'package:assistrend/shared/services/auth_helper.dart';
+import 'package:assistrend/features/chat/domain/models/chat_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:assistrend/shared/utils/storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:assistrend/features/chat/application/services/notifications_socket.dart';
-import 'package:assistrend/shared/services/auth_helper.dart'; // for TokenManager
 import '../application/providers/chat_provider.dart';
 import '../../chat/domain/models/chat_models.dart';
+import 'package:http/http.dart' as http;
 
 /// Widget displaying the list of friends and groups.
 class ChatHomePage extends ConsumerStatefulWidget {
@@ -18,11 +22,14 @@ class ChatHomePage extends ConsumerStatefulWidget {
 
 class _ChatHomePageState extends ConsumerState<ChatHomePage> {
   NotificationsSocket? socket;
+  final Map<int, int> _friendUnreadCounts = {};
+  final Map<int, int> _groupUnreadCounts = {};
 
   @override
   void initState() {
     super.initState();
     _initializeSocket();
+    _fetchAndCacheMissedMessages();
   }
 
   Future<void> _initializeSocket() async {
@@ -44,13 +51,75 @@ class _ChatHomePageState extends ConsumerState<ChatHomePage> {
             const SnackBar(content: Text("✅ Connected to WebSocket")),
           );
         }
-
-        // You can also listen to other types here (e.g., messages)
-        // if (decoded['type'] == 'new_one_to_one_message') { ... }
       } catch (e) {
         print("❌ Failed to decode WebSocket message: $e");
       }
     });
+  }
+
+  Future<void> _fetchAndCacheMissedMessages() async {
+    final token = await TokenManager.ensureValidToken();
+    final userId = await Storage.getUserId();
+    if (token == null || userId == null) return;
+
+    final uri = Uri.parse('http://10.0.2.2:8002/api/missed-messages/');
+    final response = await http.get(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final List oneToOneMessages = data['one_to_one_messages'];
+      final List groupMessages = data['group_messages'];
+
+      for (var msg in oneToOneMessages) {
+        final friendId = msg['sender_id'];
+        final oldMessages = await MessageCache.loadFriendMessages(friendId, userId);
+        final exists = oldMessages.any((m) => m.id == msg['id']);
+        if (!exists) {
+          oldMessages.add(ChatMessage(
+            id: msg['id'],
+            senderId: friendId,
+            receiverId: userId,
+            content: msg['message'] ?? '',
+            timestamp: DateTime.parse(msg['timestamp']),
+            isMe: false,
+            imageUrl: msg['image'],
+          ));
+          await MessageCache.saveFriendMessages(friendId, oldMessages);
+          _friendUnreadCounts.update(friendId, (v) => v + 1, ifAbsent: () => 1);
+        }
+      }
+
+      for (var msg in groupMessages) {
+        final groupId = msg['group_id'];
+        final oldMessages = await MessageCache.loadGroupMessages(groupId, userId);
+        final exists = oldMessages.any((m) => m.id == msg['id']);
+        if (!exists) {
+          oldMessages.add(ChatMessage(
+            id: msg['id'],
+            senderId: msg['sender_id'],
+            groupId: groupId,
+            content: msg['message'] ?? '',
+            timestamp: DateTime.parse(msg['timestamp']),
+            isMe: false,
+            imageUrl: msg['image'],
+          ));
+          await MessageCache.saveGroupMessages(groupId, oldMessages);
+          _groupUnreadCounts.update(groupId, (v) => v + 1, ifAbsent: () => 1);
+        }
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+    } else {
+      print("❌ Failed to fetch missed messages: ${response.statusCode}");
+    }
   }
 
   @override
@@ -98,24 +167,42 @@ class _ChatHomePageState extends ConsumerState<ChatHomePage> {
                   ),
                   ...friends.map(
                     (friend) => ListTile(
-                      leading:
-                          friend.profilePicture != null &&
-                              friend.profilePicture!.isNotEmpty
-                          ? CircleAvatar(
-                              radius: 24,
-                              backgroundImage: NetworkImage(
-                                'http://10.0.2.2:8002${friend.profilePicture}',
+                      leading: Stack(
+                        children: [
+                          friend.profilePicture != null && friend.profilePicture!.isNotEmpty
+                              ? CircleAvatar(
+                                  radius: 24,
+                                  backgroundImage: NetworkImage(
+                                    'http://10.0.2.2:8002${friend.profilePicture}',
+                                  ),
+                                )
+                              : const CircleAvatar(
+                                  radius: 24,
+                                  child: Icon(Icons.person),
+                                ),
+                          if (_friendUnreadCounts[friend.id] != null)
+                            Positioned(
+                              right: 0,
+                              child: CircleAvatar(
+                                radius: 10,
+                                backgroundColor: Colors.red,
+                                child: Text(
+                                  _friendUnreadCounts[friend.id].toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
                             )
-                          : const CircleAvatar(
-                              radius: 24,
-                              child: Icon(Icons.person),
-                            ),
+                        ],
+                      ),
                       title: Text(
                         friend.name.isNotEmpty ? friend.name : 'Unnamed',
                         style: const TextStyle(fontSize: 16),
                       ),
                       onTap: () {
+                        setState(() => _friendUnreadCounts.remove(friend.id));
                         context.push(
                           '/chat/friend/${friend.id}',
                           extra: {
@@ -140,15 +227,35 @@ class _ChatHomePageState extends ConsumerState<ChatHomePage> {
                   ),
                   ...groups.map(
                     (group) => ListTile(
-                      leading: const CircleAvatar(
-                        radius: 24,
-                        child: Icon(Icons.group),
+                      leading: Stack(
+                        children: [
+                          const CircleAvatar(
+                            radius: 24,
+                            child: Icon(Icons.group),
+                          ),
+                          if (_groupUnreadCounts[group.id] != null)
+                            Positioned(
+                              right: 0,
+                              child: CircleAvatar(
+                                radius: 10,
+                                backgroundColor: Colors.red,
+                                child: Text(
+                                  _groupUnreadCounts[group.id].toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            )
+                        ],
                       ),
                       title: Text(
                         group.name,
                         style: const TextStyle(fontSize: 16),
                       ),
                       onTap: () {
+                        setState(() => _groupUnreadCounts.remove(group.id));
                         context.push(
                           '/chat/group/${group.id}',
                           extra: {'groupId': group.id, 'groupName': group.name},

@@ -1,8 +1,6 @@
-// lib/features/chat/utils/message_cache.dart
-
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../domain/models/chat_message.dart'; // Unified ChatMessage model
+import '../domain/models/chat_message.dart';
 
 /// A utility class for saving and loading cached chat messages locally.
 class MessageCache {

@@ -2,11 +2,13 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:assistrend/features/chat/utils/message_cache.dart';
 import 'package:assistrend/features/chat/domain/models/chat_message.dart';
 import 'package:assistrend/features/chat/application/services/notifications_socket.dart';
+import 'package:assistrend/features/auth/providers/auth_provider.dart';
 
-class GroupChatPage extends StatefulWidget {
+class GroupChatPage extends ConsumerStatefulWidget {
   final int groupId;
   final String groupName;
 
@@ -17,25 +19,29 @@ class GroupChatPage extends StatefulWidget {
   });
 
   @override
-  State<GroupChatPage> createState() => _GroupChatPageState();
+  ConsumerState<GroupChatPage> createState() => _GroupChatPageState();
 }
 
-class _GroupChatPageState extends State<GroupChatPage> {
+class _GroupChatPageState extends ConsumerState<GroupChatPage> {
   final TextEditingController _controller = TextEditingController();
   final List<ChatMessage> _messages = [];
   NotificationsSocket? socket;
 
-  int currentUserId = 0; // TODO: Replace this with actual logged-in user ID
+  late final int currentUserId;
 
   @override
   void initState() {
     super.initState();
+    currentUserId = ref.read(authProvider).userId ?? 0;
     _loadMessages();
     _initSocket();
   }
 
   Future<void> _loadMessages() async {
-    final loaded = await MessageCache.loadGroupMessages(widget.groupId, currentUserId);
+    final loaded = await MessageCache.loadGroupMessages(
+      widget.groupId,
+      currentUserId,
+    );
     setState(() => _messages.addAll(loaded));
   }
 
@@ -52,11 +58,9 @@ class _GroupChatPageState extends State<GroupChatPage> {
         final data = jsonDecode(event);
 
         if (data['type'] == 'new_group_message' &&
-            data['group_id'] == widget.groupId) {
-          final message = ChatMessage.fromJson(data, currentUserId);
-          setState(() {
-            _messages.add(message);
-          });
+            data['payload']['group_id'] == widget.groupId) {
+          final message = ChatMessage.fromJson(data['payload'], currentUserId);
+          setState(() => _messages.add(message));
           MessageCache.saveGroupMessages(widget.groupId, _messages);
         }
       } catch (_) {}
@@ -76,12 +80,15 @@ class _GroupChatPageState extends State<GroupChatPage> {
       content: text,
       timestamp: now,
       isMe: true,
+      imageUrl: null,
     );
 
     final payload = {
-      "type": "send_group_message",
-      "group_id": widget.groupId,
-      "content": text,
+      "type": "chat_message",
+      "chat_type": "group",
+      "target_id": widget.groupId,
+      "message": text,
+      "image": null,
     };
 
     socket?.send(payload);
@@ -104,22 +111,39 @@ class _GroupChatPageState extends State<GroupChatPage> {
               itemBuilder: (_, index) {
                 final msg = _messages[_messages.length - 1 - index];
                 return Align(
-                  alignment: msg.isMe ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: msg.isMe
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: msg.isMe ? Colors.green[100] : Colors.grey[300],
+                      color: msg.isMe
+                          ? const Color.fromARGB(255, 17, 26, 34)
+                          : const Color.fromARGB(255, 2, 2, 2),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (msg.imageUrl != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6.0),
+                            child: Image.network(
+                              'http://10.0.2.2:8002${msg.imageUrl}',
+                            ),
+                          ),
                         Text(msg.content),
                         const SizedBox(height: 4),
                         Text(
                           msg.timestamp.toLocal().toString().split('.')[0],
-                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color.fromARGB(255, 210, 61, 61),
+                          ),
                         ),
                       ],
                     ),
