@@ -25,13 +25,19 @@ class AppBarwidget extends StatelessWidget {
                 color: Colors.blue,
               ),
             ),
-            const SizedBox(width: 20),
-            const Text('Good Morning, User',
+            const SizedBox(width: 15),
+            Expanded(
+              child: const Text(
+                'Good Morning, User',
                 style: TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(width: 20),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+            const SizedBox(width: 10),
             Container(
               width: 40,
               decoration: BoxDecoration(
@@ -47,7 +53,7 @@ class AppBarwidget extends StatelessWidget {
                     color: Colors.white,
                   )),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             ValueListenableBuilder(
                 valueListenable: showContainer,
                 builder: (context, value, _) {

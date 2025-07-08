@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_router.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
-import 'features/home/main/bottomnav.dart'; 
+import 'features/home/main/bottomnav.dart'; // Import the bottom navigation bar
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,8 +12,11 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  
+  // Firebase initialization removed for Windows compatibility
 
   runApp(
+    // Wrap the app with ProviderScope for Riverpod
     ProviderScope(
       child: const MyApp(),
     ),
@@ -60,7 +61,8 @@ class MyApp extends StatelessWidget {
   }
 }
 
- class ScaffoldWithBottomNav extends StatelessWidget {
+// Create a scaffold with bottom navigation that can be used in routes that need it
+class ScaffoldWithBottomNav extends StatelessWidget {
   final Widget child;
 
   const ScaffoldWithBottomNav({Key? key, required this.child}) : super(key: key);

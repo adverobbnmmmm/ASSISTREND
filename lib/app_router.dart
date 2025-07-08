@@ -16,6 +16,7 @@ import 'features/profile/presentation/edit_profile.dart';
 import 'features/auth/presentation/assistrend_login.dart';
 import 'features/auth/presentation/assistrend_signup.dart';
 import 'features/auth/presentation/otp_screen.dart';
+import 'features/upload/presentation/upload.dart';
 
 /// The router configuration for the app using GoRouter
 class AppRouter {
@@ -83,6 +84,11 @@ class AppRouter {
             path: '/profile',
             name: 'profile',
             builder: (context, state) => ProfilePage(),
+          ),
+          GoRoute(
+            path: '/upload',
+            name: 'upload',
+            builder: (context, state) => const UploadPage(),
           ),
         ],
       ),

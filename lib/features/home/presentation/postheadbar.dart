@@ -1,9 +1,33 @@
 import 'package:flutter/material.dart';
 
 class PostHeadBar extends StatelessWidget {
+  final String username;
+  final String? category;
+  final DateTime? createdAt;
+  
   const PostHeadBar({
     super.key,
+    required this.username,
+    this.category,
+    this.createdAt,
   });
+
+  String _formatTimeAgo(DateTime? dateTime) {
+    if (dateTime == null) return 'Just now';
+    
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,17 +45,18 @@ class PostHeadBar extends StatelessWidget {
                     fit: BoxFit.fill),
                 color: Colors.grey),
           ),
-          const Padding(
-            padding: EdgeInsets.all(8.0),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Username',
-                    style: TextStyle(
+                Text(username,
+                    style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold)),
-                Text('timeupdated',
-                    style: TextStyle(color: Colors.grey, fontSize: 12.5)),
+                Text(_formatTimeAgo(createdAt),
+                    style: const TextStyle(color: Colors.grey, fontSize: 12.5)),
               ],
             ),
           ),
@@ -69,10 +94,10 @@ class PostHeadBar extends StatelessWidget {
                         color: const Color(0xff181a1c),
                         borderRadius: BorderRadius.circular(3),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
-                          'Opinion',
-                          style: TextStyle(
+                          category ?? 'Opinion',
+                          style: const TextStyle(
                               color: Colors.white,
                               fontSize: 15,
                               fontWeight: FontWeight.bold),

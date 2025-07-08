@@ -40,7 +40,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
                     context.go('/search');
                     break;
                   case 2:
-                    // Create post page - implement as needed
+                    // Navigate to upload page
+                    context.go('/upload');
                     break;
                   case 3:
                     // Challenge page - implement as needed
