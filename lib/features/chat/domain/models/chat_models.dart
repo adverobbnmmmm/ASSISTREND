@@ -10,10 +10,14 @@ class Friend {
   factory Friend.fromJson(Map<String, dynamic> json) {
     return Friend(
       id: json['id'] as int,
-      // If name is null, fallback to empty string
       name: json['name'] as String? ?? '',
       profilePicture: json['profile_picture'] as String?,
     );
+  }
+
+  /// Convert a Friend instance to JSON
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'name': name, 'profile_picture': profilePicture};
   }
 }
 
@@ -28,10 +32,12 @@ class ChatGroup {
   factory ChatGroup.fromJson(Map<String, dynamic> json) {
     return ChatGroup(
       id: json['id'] as int,
-      // Use group_name field and fallback to empty string if null
       name: json['group_name'] as String? ?? '',
     );
   }
+
+  /// Convert a ChatGroup instance to JSON
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'group_name': name};
+  }
 }
-
-

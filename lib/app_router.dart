@@ -1,4 +1,6 @@
 import 'package:assistrend/features/chat/presentation/chat_home_page.dart';
+import 'package:assistrend/features/chat/presentation/pages/friend_chat_page.dart';
+import 'package:assistrend/features/chat/presentation/pages/group_chat_page.dart';
 import 'package:assistrend/features/home/presentation/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -67,6 +69,26 @@ class AppRouter {
         builder: (context, state) {
           final email = state.uri.queryParameters['email'] ?? '';
           return OTPScreen(email: email);
+        },
+      ),
+      GoRoute(
+        path: '/chat/friend/:id',
+        builder: (context, state) {
+          final extra = state.extra! as Map<String, dynamic>;
+          return FriendChatPage(
+            friendId: extra['friendId'],
+            friendName: extra['friendName'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/chat/group/:id',
+        builder: (context, state) {
+          final extra = state.extra! as Map<String, dynamic>;
+          return GroupChatPage(
+            groupId: extra['groupId'],
+            groupName: extra['groupName'],
+          );
         },
       ),
 
