@@ -172,6 +172,7 @@ class _SeeMorePostsPageState extends ConsumerState<SeeMorePostsPage>
 
   Widget _buildSinglePost(Post post) {
     bool _isLiked = false;
+    final profileData = ref.read(profileProvider).profile;
 
     return Container(
       decoration: BoxDecoration(
@@ -216,6 +217,27 @@ class _SeeMorePostsPageState extends ConsumerState<SeeMorePostsPage>
             style: TextStyle(color: Colors.white),
           ),
           const SizedBox(height: 12),
+          
+          // User Interests
+          if (profileData.interests.isNotEmpty) ...[
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: profileData.interests.map((interest) => 
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(interest, 
+                    style: TextStyle(color: Colors.blue[300], fontSize: 12),
+                  ),
+                )
+              ).toList(),
+            ),
+            const SizedBox(height: 12),
+          ],
 
           // Post Image
           if (post.imageUrl.isNotEmpty)

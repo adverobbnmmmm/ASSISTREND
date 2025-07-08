@@ -4,8 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_router.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
-// Conditionally import Firebase packages
-import 'package:firebase_core/firebase_core.dart' if (dart.library.js_util) '' as firebase;
+import 'features/home/main/bottomnav.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,27 +15,13 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  await _initializeFirebase();  
   runApp(
-    // Wrap the app with ProviderScope for Riverpod
     ProviderScope(
       child: const MyApp(),
     ),
   );
 }
 
-Future<void> _initializeFirebase() async {
-  try {
-    // Only initialize Firebase on supported platforms
-    if (!kIsWeb && !(Platform.isWindows)) {
-      await firebase.Firebase.initializeApp();
-      debugPrint('Firebase initialized successfully');
-    } else {
-      debugPrint('Firebase initialization skipped on this platform');
-    }  } catch (e) {
-    debugPrint('Failed to initialize Firebase: $e');
-  }
-}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -71,6 +56,20 @@ class MyApp extends StatelessWidget {
       // Use the router configuration from the AppRouter class
       routerConfig: AppRouter.router,
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+ class ScaffoldWithBottomNav extends StatelessWidget {
+  final Widget child;
+
+  const ScaffoldWithBottomNav({Key? key, required this.child}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: const BottomNavBar(),
     );
   }
 }

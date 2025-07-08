@@ -3,11 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'main.dart';
+import 'features/profile/models/profile_model.dart';
+import 'features/search/presentation/search_page.dart';
+
 // Screens
 import 'assistrend_opening.dart';
 import 'assistrend_forgotpass.dart';
 import 'features/profile/presentation/profile.dart';
 import 'features/profile/presentation/more_post.dart';
+import 'features/profile/presentation/edit_profile.dart';
 import 'features/auth/presentation/assistrend_login.dart';
 import 'features/auth/presentation/assistrend_signup.dart';
 import 'features/auth/presentation/otp_screen.dart';
@@ -19,6 +24,7 @@ class AppRouter {
 
   // Create a key for the navigator
   static final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+  static final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
   
   /// The go router configuration used for routing
   static final GoRouter router = GoRouter(
@@ -57,21 +63,43 @@ class AppRouter {
           return OTPScreen(email: email);
         },
       ),
-      // Main app routes (protected)
-      GoRoute(
-        path: '/home',
-        name: 'home',
-        builder: (context, state) => HomePage(),
+      
+      // Main app routes (protected, with bottom navigation)
+      ShellRoute(
+        navigatorKey: _shellNavigatorKey,
+        builder: (context, state, child) => ScaffoldWithBottomNav(child: child),
+        routes: [
+          GoRoute(
+            path: '/home',
+            name: 'home',
+            builder: (context, state) => HomePage(),
+          ),
+          GoRoute(
+            path: '/search',
+            name: 'search',
+            builder: (context, state) => const SearchPage(),
+          ),
+          GoRoute(
+            path: '/profile',
+            name: 'profile',
+            builder: (context, state) => ProfilePage(),
+          ),
+        ],
       ),
-      GoRoute(
-        path: '/profile',
-        name: 'profile',
-        builder: (context, state) => ProfilePage(),
-      ),
+      
+      // Routes without bottom navigation
       GoRoute(
         path: '/more-posts',
         name: 'morePosts',
         builder: (context, state) => SeeMorePostsPage(),
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        name: 'editProfile',
+        builder: (context, state) {
+          final profile = state.extra as ProfileModel;
+          return EditProfilePage(profile: profile);
+        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
