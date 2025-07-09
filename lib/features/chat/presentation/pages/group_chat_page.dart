@@ -1,4 +1,4 @@
-// group_chat_page.dart
+// === group_chat_page.dart ===
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -7,6 +7,7 @@ import 'package:assistrend/features/chat/utils/message_cache.dart';
 import 'package:assistrend/features/chat/domain/models/chat_message.dart';
 import 'package:assistrend/features/chat/application/services/notifications_socket.dart';
 import 'package:assistrend/features/auth/providers/auth_provider.dart';
+import '../../application/providers/chat_open_state_provider.dart'; // <-- ✅ Add this
 
 class GroupChatPage extends ConsumerStatefulWidget {
   final int groupId;
@@ -26,15 +27,28 @@ class _GroupChatPageState extends ConsumerState<GroupChatPage> {
   final TextEditingController _controller = TextEditingController();
   final List<ChatMessage> _messages = [];
   NotificationsSocket? socket;
-
   late final int currentUserId;
 
   @override
   void initState() {
     super.initState();
+
+    // ✅ Store the current open group chat ID in global Riverpod state
+    Future.microtask(() {
+      ref.read(openGroupChatIdProvider.notifier).state = widget.groupId;
+    });
+
     currentUserId = ref.read(authProvider).userId ?? 0;
     _loadMessages();
     _initSocket();
+  }
+
+  @override
+  void dispose() {
+    // ✅ Clear the currently open group chat ID on exit
+    ref.read(openGroupChatIdProvider.notifier).state = null;
+
+    super.dispose();
   }
 
   Future<void> _loadMessages() async {
@@ -42,6 +56,19 @@ class _GroupChatPageState extends ConsumerState<GroupChatPage> {
       widget.groupId,
       currentUserId,
     );
+
+    // Mark unread messages as read
+    bool updated = false;
+    for (final msg in loaded) {
+      if (!msg.read && !msg.isMe) {
+        msg.read = true;
+        updated = true;
+      }
+    }
+    if (updated) {
+      await MessageCache.saveGroupMessages(widget.groupId, loaded);
+    }
+
     setState(() => _messages.addAll(loaded));
   }
 
@@ -60,6 +87,7 @@ class _GroupChatPageState extends ConsumerState<GroupChatPage> {
         if (data['type'] == 'new_group_message' &&
             data['payload']['group_id'] == widget.groupId) {
           final message = ChatMessage.fromJson(data['payload'], currentUserId);
+          message.read = true;
           setState(() => _messages.add(message));
           MessageCache.saveGroupMessages(widget.groupId, _messages);
         }
@@ -81,6 +109,7 @@ class _GroupChatPageState extends ConsumerState<GroupChatPage> {
       timestamp: now,
       isMe: true,
       imageUrl: null,
+      read: true,
     );
 
     final payload = {

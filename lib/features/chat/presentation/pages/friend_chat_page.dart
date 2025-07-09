@@ -7,6 +7,7 @@ import 'package:assistrend/features/chat/utils/message_cache.dart';
 import 'package:assistrend/features/chat/domain/models/chat_message.dart';
 import 'package:assistrend/features/chat/application/services/notifications_socket.dart';
 import 'package:assistrend/features/auth/providers/auth_provider.dart';
+import '../../application/providers/chat_open_state_provider.dart';
 
 class FriendChatPage extends ConsumerStatefulWidget {
   final int friendId;
@@ -32,9 +33,22 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
   @override
   void initState() {
     super.initState();
+
+    // Set current open friend chat ID
+    Future.microtask(() {
+      ref.read(openFriendChatIdProvider.notifier).state = widget.friendId;
+    });
+
     currentUserId = ref.read(authProvider).userId ?? 0;
     _loadMessages();
     _initSocket();
+  }
+
+  @override
+  void dispose() {
+    // Clear open friend chat ID
+    ref.read(openFriendChatIdProvider.notifier).state = null;
+    super.dispose();
   }
 
   Future<void> _loadMessages() async {
@@ -42,6 +56,19 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
       widget.friendId,
       currentUserId,
     );
+
+    // Mark unread messages as read
+    bool updated = false;
+    for (final msg in loaded) {
+      if (!msg.read && !msg.isMe) {
+        msg.read = true;
+        updated = true;
+      }
+    }
+    if (updated) {
+      await MessageCache.saveFriendMessages(widget.friendId, loaded);
+    }
+
     setState(() => _messages.addAll(loaded));
   }
 
@@ -56,12 +83,14 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
     socket!.stream.listen((event) {
       try {
         final data = jsonDecode(event);
+
         if (data['type'] == 'new_one_to_one_message' &&
             data['payload']['sender_id'] == widget.friendId) {
           final newMessage = ChatMessage.fromJson(
             data['payload'],
             currentUserId,
           );
+          newMessage.read = true;
           setState(() => _messages.add(newMessage));
           MessageCache.saveFriendMessages(widget.friendId, _messages);
         }
@@ -85,6 +114,7 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
       timestamp: now,
       isMe: true,
       imageUrl: null,
+      read: true,
     );
 
     final payload = {
@@ -132,11 +162,13 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (msg.imageUrl != null) // ✅ Render image if exists
+                        if (msg.imageUrl != null && msg.imageUrl!.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 6.0),
                             child: Image.network(
                               'http://10.0.2.2:8002${msg.imageUrl}',
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Text('📷 Failed to load image'),
                             ),
                           ),
                         Text(msg.content),

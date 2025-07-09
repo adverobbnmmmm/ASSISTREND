@@ -4,6 +4,10 @@ import '../domain/models/chat_message.dart';
 
 /// A utility class for saving and loading cached chat messages locally.
 class MessageCache {
+  // ========================
+  // 🔵 FRIEND MESSAGE SUPPORT
+  // ========================
+
   /// Save messages for a specific friend chat
   static Future<void> saveFriendMessages(int friendId, List<ChatMessage> messages) async {
     final prefs = await SharedPreferences.getInstance();
