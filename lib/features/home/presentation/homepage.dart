@@ -2,6 +2,7 @@ import 'package:assistrend/features/home/presentation/appbar.dart';
 import 'package:assistrend/features/home/presentation/carousel.dart';
 import 'package:assistrend/features/home/presentation/connect.dart';
 import 'package:assistrend/features/home/presentation/posts.dart';
+import 'package:assistrend/features/home/services/audio_player_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
@@ -14,8 +15,20 @@ void toggleContainer() {
   showContainer.value = !showContainer.value;
 }
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
+
+  @override
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  @override
+  void dispose() {
+    // Clean up audio player when page is disposed
+    AudioPlayerService.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
     try {
@@ -46,7 +59,7 @@ class HomePage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     // Get user info from auth state
     final authState = ref.watch(authProvider);
     final userId = authState.userId;

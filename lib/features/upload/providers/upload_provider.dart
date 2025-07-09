@@ -11,6 +11,7 @@ import '../models/upload_model.dart';
 import '../services/platform_media_service.dart';
 import '../services/mobile_media_picker.dart';
 import '../services/gallery_service.dart';
+import '../services/audio_recorder_service.dart';
 import '../../../shared/utils/storage.dart';
 
 // Define state for upload feature
@@ -28,6 +29,11 @@ class UploadState {
   final List<RecentMedia> recentMedia;
   final bool isLoadingRecentMedia;
   final String? category;
+  final bool isRecording;
+  final int? recordingDurationMs;
+  final bool showAudioPrompt; // Show prompt to add audio after image selection
+  final bool wantsToAddAudio; // User chose to add audio
+  final UploadMedia? audioMedia; // Separate audio file
   
   UploadState({
     this.isLoading = false,
@@ -43,6 +49,11 @@ class UploadState {
     this.recentMedia = const [],
     this.isLoadingRecentMedia = false,
     this.category,
+    this.isRecording = false,
+    this.recordingDurationMs,
+    this.showAudioPrompt = false,
+    this.wantsToAddAudio = false,
+    this.audioMedia,
   });
 
   UploadState copyWith({
@@ -59,6 +70,11 @@ class UploadState {
     List<RecentMedia>? recentMedia,
     bool? isLoadingRecentMedia,
     String? category,
+    bool? isRecording,
+    int? recordingDurationMs,
+    bool? showAudioPrompt,
+    bool? wantsToAddAudio,
+    UploadMedia? audioMedia,
   }) {
     return UploadState(
       isLoading: isLoading ?? this.isLoading,
@@ -74,11 +90,16 @@ class UploadState {
       recentMedia: recentMedia ?? this.recentMedia,
       isLoadingRecentMedia: isLoadingRecentMedia ?? this.isLoadingRecentMedia,
       category: category ?? this.category,
+      isRecording: isRecording ?? this.isRecording,
+      recordingDurationMs: recordingDurationMs ?? this.recordingDurationMs,
+      showAudioPrompt: showAudioPrompt ?? this.showAudioPrompt,
+      wantsToAddAudio: wantsToAddAudio ?? this.wantsToAddAudio,
+      audioMedia: audioMedia ?? this.audioMedia,
     );
   }
 
-  bool get isValid => caption.isNotEmpty || selectedMedia != null;
-  bool get hasMedia => selectedMedia != null;
+  bool get isValid => caption.isNotEmpty || selectedMedia != null || audioMedia != null;
+  bool get hasMedia => selectedMedia != null || audioMedia != null;
   bool get hasRecentMedia => recentMedia.isNotEmpty;
 }
 
@@ -220,7 +241,9 @@ class UploadNotifier extends StateNotifier<UploadState> {
         state = state.copyWith(
           selectedMedia: media,
           isLoading: false,
+          showAudioPrompt: media.type == MediaType.image, // Show audio prompt for images
         );
+        debugPrint('UploadProvider: showAudioPrompt set to ${state.showAudioPrompt}');
       } else {
         // On mobile platforms, we need to actually use image_picker
         // since platform service returned null
@@ -236,7 +259,9 @@ class UploadNotifier extends StateNotifier<UploadState> {
             state = state.copyWith(
               selectedMedia: mobileMedia,
               isLoading: false,
+              showAudioPrompt: mobileMedia.type == MediaType.image, // Show audio prompt for images
             );
+            debugPrint('UploadProvider: showAudioPrompt set to ${state.showAudioPrompt}');
           } else {
             // User canceled the picker
             debugPrint('UploadProvider: Image selection canceled by user');
@@ -320,8 +345,18 @@ class UploadNotifier extends StateNotifier<UploadState> {
   Future<String?> uploadToCloudinary(String filePath, MediaType mediaType) async {
     final cloudinary = CloudinaryPublic('dwnhpd6oe', 'unsigned_preset', cache: false);
     try {
-      final CloudinaryResourceType resourceType =
-          mediaType == MediaType.video ? CloudinaryResourceType.Video : CloudinaryResourceType.Image;
+      CloudinaryResourceType resourceType;
+      switch (mediaType) {
+        case MediaType.video:
+          resourceType = CloudinaryResourceType.Video;
+          break;
+        case MediaType.audio:
+          resourceType = CloudinaryResourceType.Video; // Cloudinary treats audio as video resource
+          break;
+        case MediaType.image:
+          resourceType = CloudinaryResourceType.Image;
+          break;
+      }
 
       CloudinaryResponse response = await cloudinary.uploadFile(
         CloudinaryFile.fromFile(filePath, resourceType: resourceType),
@@ -344,31 +379,59 @@ class UploadNotifier extends StateNotifier<UploadState> {
 
     try {
       String? mediaUrl;
+      String? audioUrl;
+      
+      // Upload main media (image/video)
       if (state.selectedMedia != null) {
         if (state.selectedMedia?.path != null) {
           final String mediaPath = state.selectedMedia?.path ?? '';
-           mediaUrl = await uploadToCloudinary(mediaPath, state.selectedMedia!.type);
+          mediaUrl = await uploadToCloudinary(mediaPath, state.selectedMedia!.type);
         }
+        
         if (mediaUrl == null) {
           throw Exception('Failed to upload media to Cloudinary.');
         }
-
       }
-      final url='http://10.0.2.2:8001';
+      
+      // Upload audio media separately if present
+      if (state.audioMedia != null) {
+        if (state.audioMedia?.path != null) {
+          final String audioPath = state.audioMedia?.path ?? '';
+          audioUrl = await uploadToCloudinary(audioPath, state.audioMedia!.type);
+        }
+        
+        if (audioUrl == null) {
+          throw Exception('Failed to upload audio to Cloudinary.');
+        }
+      }
+      
+      final url = 'http://10.0.2.2:8001';
+      
+      // Prepare request body
+      final Map<String, dynamic> requestBody = {
+        'userId': await Storage.getUserId(),
+        'caption': state.caption,
+        'category': state.category,
+      };
+      
+      // Add URLs based on what was uploaded
+      if (mediaUrl != null) {
+        requestBody['imageUrl'] = mediaUrl;
+      }
+      if (audioUrl != null) {
+        requestBody['audioUrl'] = audioUrl;
+      }
+      
       await http.post(
         Uri.parse('${url}/api/social-service/features/uploadPost/'),
         headers: <String, String>{
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'userId': await Storage.getUserId(), // Get userId from storage
-          'caption': state.caption,
-          'imageUrl': mediaUrl,
-          'category': state.category,
-        }),
+        body: jsonEncode(requestBody),
       );
-      // Simulate API call
-      debugPrint('Uploading: Caption: ${state.caption}, Media URL: $mediaUrl, Filter: ${state.selectedFilter}, Adjustments: ${state.adjustments}, Tags: ${state.tags}, Location: ${state.location}');
+      
+      // Log upload details
+      debugPrint('Uploading: Caption: ${state.caption}, Media URL: $mediaUrl, Audio URL: $audioUrl, Filter: ${state.selectedFilter}, Adjustments: ${state.adjustments}, Tags: ${state.tags}, Location: ${state.location}');
 
       state = state.copyWith(isUploading: false, uploadSuccess: true);
       debugPrint('Upload successful!');
@@ -389,7 +452,7 @@ class UploadNotifier extends StateNotifier<UploadState> {
       if (media != null) {
         // For desktop/mock platforms
         state = state.copyWith(
-          selectedMedia: media,
+          audioMedia: media, // Set as audio media
           isLoading: false,
         );
       } else {
@@ -400,7 +463,7 @@ class UploadNotifier extends StateNotifier<UploadState> {
           
           if (mobileMedia != null) {
             state = state.copyWith(
-              selectedMedia: mobileMedia,
+              audioMedia: mobileMedia, // Set as audio media
               isLoading: false,
             );
           } else {
@@ -426,6 +489,107 @@ class UploadNotifier extends StateNotifier<UploadState> {
   // Clear selected media
   void clearSelectedMedia() {
     state = state.copyWith(selectedMedia: null);
+  }
+
+  // Start audio recording
+  Future<void> startAudioRecording() async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+      
+      final success = await AudioRecorderService.startRecording();
+      if (success) {
+        state = state.copyWith(
+          isRecording: true,
+          isLoading: false,
+        );
+        debugPrint('UploadProvider: Audio recording started');
+      } else {
+        state = state.copyWith(
+          error: 'Failed to start recording. Please check microphone permissions.',
+          isLoading: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('UploadProvider: Error starting audio recording: $e');
+      state = state.copyWith(
+        error: 'Failed to start recording: $e',
+        isLoading: false,
+      );
+    }
+  }
+
+  // Stop audio recording
+  Future<void> stopAudioRecording() async {
+    try {
+      state = state.copyWith(isLoading: true);
+      
+      final media = await AudioRecorderService.stopRecording();
+      if (media != null) {
+        state = state.copyWith(
+          audioMedia: media, // Set as audio media, not selectedMedia
+          isRecording: false,
+          isLoading: false,
+        );
+        debugPrint('UploadProvider: Audio recording stopped and saved');
+      } else {
+        state = state.copyWith(
+          error: 'Failed to save recording',
+          isRecording: false,
+          isLoading: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('UploadProvider: Error stopping audio recording: $e');
+      state = state.copyWith(
+        error: 'Failed to stop recording: $e',
+        isRecording: false,
+        isLoading: false,
+      );
+    }
+  }
+
+  // Cancel audio recording
+  Future<void> cancelAudioRecording() async {
+    try {
+      await AudioRecorderService.cancelRecording();
+      state = state.copyWith(
+        isRecording: false,
+        recordingDurationMs: null,
+      );
+      debugPrint('UploadProvider: Audio recording canceled');
+    } catch (e) {
+      debugPrint('UploadProvider: Error canceling audio recording: $e');
+      state = state.copyWith(
+        error: 'Failed to cancel recording: $e',
+        isRecording: false,
+      );
+    }
+  }
+
+  // Accept audio prompt and start audio recording/selection
+  void acceptAudioPrompt() {
+    state = state.copyWith(
+      showAudioPrompt: false,
+      wantsToAddAudio: true,
+    );
+  }
+
+  // Decline audio prompt and proceed without audio
+  void declineAudioPrompt() {
+    state = state.copyWith(
+      showAudioPrompt: false,
+      wantsToAddAudio: false,
+    );
+  }
+
+  // Set audio media separately from main media
+  void setAudioMedia(UploadMedia audioMedia) {
+    state = state.copyWith(audioMedia: audioMedia);
+  }
+
+  // Clear audio media
+  void clearAudioMedia() {
+    state = state.copyWith(audioMedia: null);
   }
   
 
@@ -493,6 +657,16 @@ class UploadNotifier extends StateNotifier<UploadState> {
         isUploading: false,
       );
     }
+  }
+
+  // Dispose resources
+  @override
+  void dispose() {
+    // Cancel any ongoing recording
+    if (state.isRecording) {
+      AudioRecorderService.cancelRecording();
+    }
+    super.dispose();
   }
 }
 

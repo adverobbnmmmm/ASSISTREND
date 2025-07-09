@@ -57,6 +57,8 @@ class _UploadPageState extends ConsumerState<UploadPage> {
           // Watch the provider here to react to state changes
           ref.watch(uploadProvider.select((state) => state.uploadSuccess));
           ref.watch(uploadProvider.select((state) => state.error));
+          ref.watch(uploadProvider.select((state) => state.isRecording));
+          ref.watch(uploadProvider.select((state) => state.showAudioPrompt));
 
           // Use a post-frame callback to show SnackBar only (navigation handled in button)
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -67,6 +69,21 @@ class _UploadPageState extends ConsumerState<UploadPage> {
               );
             }
           });
+
+          // Show audio prompt dialog when needed (separate from post-frame callback)
+          if (uploadState.showAudioPrompt) {
+            print('DEBUG: showAudioPrompt is true, showing dialog');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showAudioPromptDialog();
+            });
+          } else {
+            print('DEBUG: showAudioPrompt is false');
+          }
+
+          // Show recording UI if recording is active
+          if (uploadState.isRecording) {
+            return _buildRecordingView(uploadState);
+          }
 
           return !uploadState.hasMedia
             ? _buildMediaSelectionView(context, uploadState) 
@@ -157,6 +174,93 @@ class _UploadPageState extends ConsumerState<UploadPage> {
     );
   }
   
+  // Audio recording view
+  Widget _buildRecordingView(UploadState uploadState) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Recording indicator
+            Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.red.withOpacity(0.1),
+                border: Border.all(color: Colors.red, width: 3),
+              ),
+              child: const Icon(
+                Icons.mic,
+                size: 80,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(height: 32),
+            
+            // Recording status
+            const Text(
+              'Recording Audio...',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Recording controls
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Cancel button
+                ElevatedButton.icon(
+                  onPressed: () => ref.read(uploadProvider.notifier).cancelAudioRecording(),
+                  icon: const Icon(Icons.cancel),
+                  label: const Text('Cancel'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+                
+                // Stop button
+                ElevatedButton.icon(
+                  onPressed: () => ref.read(uploadProvider.notifier).stopAudioRecording(),
+                  icon: const Icon(Icons.stop),
+                  label: const Text('Stop'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Error message
+            if (uploadState.error != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  uploadState.error!,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+  
   // Instagram-style media selection screen with large buttons
   Widget _buildMediaSelectionView(BuildContext context, UploadState uploadState) {
     return Center(
@@ -236,6 +340,32 @@ class _UploadPageState extends ConsumerState<UploadPage> {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildMediaSelectionCard(
+                  title: 'Record Audio',
+                  icon: Icons.mic,
+                  onTap: () async {
+                    final hasPermission = await PermissionService.requestMicrophonePermission(context);
+                    if (hasPermission && context.mounted) {
+                      ref.read(uploadProvider.notifier).startAudioRecording();
+                    }
+                  },
+                ),
+                _buildMediaSelectionCard(
+                  title: 'Audio File',
+                  icon: Icons.audio_file,
+                  onTap: () async {
+                    final hasPermission = await PermissionService.requestStoragePermission(context);
+                    if (hasPermission && context.mounted) {
+                      ref.read(uploadProvider.notifier).pickAudio();
+                    }
+                  },
+                ),
+              ],
+            ),
             const SizedBox(height: 24),
             
             // Error message
@@ -305,17 +435,18 @@ class _UploadPageState extends ConsumerState<UploadPage> {
     return Column(
       children: [
         // Media preview (square like Instagram)
-        AspectRatio(
-          aspectRatio: 1.0,  // Square aspect ratio like Instagram
-          child: Container(
-            width: double.infinity,
-            color: Colors.black,
-            child: MediaPreviewCard(
-              media: uploadState.selectedMedia!,
-              onDelete: () => ref.read(uploadProvider.notifier).clearMedia(),
+        if (uploadState.selectedMedia != null)
+          AspectRatio(
+            aspectRatio: 1.0,  // Square aspect ratio like Instagram
+            child: Container(
+              width: double.infinity,
+              color: Colors.black,
+              child: MediaPreviewCard(
+                media: uploadState.selectedMedia!,
+                onDelete: () => ref.read(uploadProvider.notifier).clearMedia(),
+              ),
             ),
           ),
-        ),
         
         const Divider(height: 1),
         
@@ -375,6 +506,10 @@ class _UploadPageState extends ConsumerState<UploadPage> {
                   ],
                 ),
                 
+                // Audio recording section (if user wants to add audio)
+                if (uploadState.wantsToAddAudio)
+                  _buildAudioRecordingSection(uploadState),
+                
                 // Instagram-like additional options
                 const SizedBox(height: 16),
                 const Divider(height: 1),
@@ -432,6 +567,46 @@ class _UploadPageState extends ConsumerState<UploadPage> {
     );
   }
   
+  // Audio prompt dialog after image upload
+  void _showAudioPromptDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must make a choice
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.audiotrack, color: Colors.deepPurple),
+            const SizedBox(width: 8),
+            const Text('Add Audio?'),
+          ],
+        ),
+        content: const Text(
+          'Would you like to add an audio recording or upload an audio file to enhance your post?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              ref.read(uploadProvider.notifier).declineAudioPrompt();
+            },
+            child: const Text('Skip'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              ref.read(uploadProvider.notifier).acceptAudioPrompt();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Add Audio'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Instagram-style discard confirmation dialog
   void _showDiscardConfirmation() {
     showDialog(
@@ -454,6 +629,179 @@ class _UploadPageState extends ConsumerState<UploadPage> {
         ],
       ),
     );
+  }
+
+  // Audio recording section for adding audio to posts
+  Widget _buildAudioRecordingSection(UploadState uploadState) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const Divider(height: 1),
+        const SizedBox(height: 16),
+        
+        // Audio section header
+        Row(
+          children: [
+            const Icon(Icons.audiotrack, color: Colors.deepPurple),
+            const SizedBox(width: 8),
+            Text(
+              'Add Audio',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Audio recording controls
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // Record button
+            _buildAudioActionButton(
+              icon: uploadState.isRecording ? Icons.stop : Icons.mic,
+              label: uploadState.isRecording ? 'Stop' : 'Record',
+              color: uploadState.isRecording ? Colors.red : Colors.deepPurple,
+              onPressed: uploadState.isRecording
+                  ? () => ref.read(uploadProvider.notifier).stopAudioRecording()
+                  : () async {
+                      final hasPermission = await PermissionService.requestMicrophonePermission(context);
+                      if (hasPermission && context.mounted) {
+                        ref.read(uploadProvider.notifier).startAudioRecording();
+                      }
+                    },
+            ),
+            
+            // Pick audio file button
+            _buildAudioActionButton(
+              icon: Icons.audio_file,
+              label: 'Pick File',
+              color: Colors.blue,
+              onPressed: uploadState.isRecording
+                  ? null
+                  : () async {
+                      final hasPermission = await PermissionService.requestAudioPermission(context);
+                      if (hasPermission && context.mounted) {
+                        ref.read(uploadProvider.notifier).pickAudio();
+                      }
+                    },
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Show selected audio info
+        if (uploadState.audioMedia != null)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.deepPurple.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.deepPurple.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.audiotrack, color: Colors.deepPurple),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        uploadState.audioMedia?.path?.split('/').last ?? 'Audio Recording',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      if (uploadState.audioMedia?.durationMs != null)
+                        Text(
+                          'Duration: ${_formatDuration(uploadState.audioMedia!.durationMs!)}',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => ref.read(uploadProvider.notifier).clearAudioMedia(),
+                  icon: const Icon(Icons.close, color: Colors.red),
+                ),
+              ],
+            ),
+          ),
+        
+        // Recording indicator
+        if (uploadState.isRecording)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.fiber_manual_record, color: Colors.red, size: 12),
+                const SizedBox(width: 8),
+                const Text(
+                  'Recording audio...',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => ref.read(uploadProvider.notifier).cancelAudioRecording(),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Helper method to build audio action buttons
+  Widget _buildAudioActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback? onPressed,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    );
+  }
+
+  // Format duration helper method
+  String _formatDuration(int milliseconds) {
+    final Duration duration = Duration(milliseconds: milliseconds);
+    final int minutes = duration.inMinutes;
+    final int seconds = (duration.inSeconds) % 60;
+    
+    final String minutesString = '$minutes';
+    final String secondsString = seconds < 10 ? '0$seconds' : '$seconds';
+    
+    return '$minutesString:$secondsString';
   }
 
 

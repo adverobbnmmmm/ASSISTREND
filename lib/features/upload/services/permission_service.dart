@@ -77,6 +77,22 @@ class PermissionService {
     return true;
   }
 
+  /// Request microphone permission, mocked on desktop
+  static Future<bool> requestMicrophonePermission(BuildContext context) async {
+    if (!_isMobilePlatform) {
+      _showMockPermissionInfo(
+        context: context,
+        title: 'Microphone Access',
+        message: 'Microphone access would be requested on a mobile device.',
+      );
+      return true;
+    }
+    
+    // On mobile platform this would use the permission_handler package
+    debugPrint('PermissionService: Microphone permission requested on mobile device');
+    return true;
+  }
+
   /// Show a mock permission information dialog
   static void _showMockPermissionInfo({
     required BuildContext context,
