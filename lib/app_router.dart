@@ -4,19 +4,18 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'main.dart';
-import 'features/profile/models/profile_model.dart';
-import 'features/search/presentation/search_page.dart';
-
-// Screens
 import 'assistrend_opening.dart';
 import 'assistrend_forgotpass.dart';
-import 'features/profile/presentation/profile.dart';
-import 'features/profile/presentation/more_post.dart';
-import 'features/profile/presentation/edit_profile.dart';
 import 'features/auth/presentation/assistrend_login.dart';
 import 'features/auth/presentation/assistrend_signup.dart';
 import 'features/auth/presentation/otp_screen.dart';
+import 'features/profile/models/profile_model.dart';
+import 'features/profile/presentation/profile.dart';
+import 'features/profile/presentation/more_post.dart';
+import 'features/profile/presentation/edit_profile.dart';
 import 'features/upload/presentation/upload.dart';
+import 'features/search/presentation/search_page.dart';
+import 'features/home/presentation/comments_test_page.dart';
 
 /// The router configuration for the app using GoRouter
 class AppRouter {
@@ -54,7 +53,7 @@ class AppRouter {
       GoRoute(
         path: '/forgot-password',
         name: 'forgotPassword',
-        builder: (context, state) => AssistrendForgotpass(),
+        builder: (context, state) => const AssistrendForgotpass(),
       ),
       GoRoute(
         path: '/otp-verification',
@@ -64,6 +63,9 @@ class AppRouter {
           return OTPScreen(email: email);
         },
       ),
+      
+      // Profile completion screen (shown after login if profile is incomplete)
+
       
       // Main app routes (protected, with bottom navigation)
       ShellRoute(
@@ -83,7 +85,7 @@ class AppRouter {
           GoRoute(
             path: '/profile',
             name: 'profile',
-            builder: (context, state) => ProfilePage(),
+            builder: (context, state) => const ProfilePage(),
           ),
           GoRoute(
             path: '/upload',
@@ -95,9 +97,14 @@ class AppRouter {
       
       // Routes without bottom navigation
       GoRoute(
+        path: '/comments-test',
+        name: 'commentsTest',
+        builder: (context, state) => const CommentsTestPage(),
+      ),
+      GoRoute(
         path: '/more-posts',
         name: 'morePosts',
-        builder: (context, state) => SeeMorePostsPage(),
+        builder: (context, state) => const SeeMorePostsPage(),
       ),
       GoRoute(
         path: '/edit-profile',
@@ -128,11 +135,11 @@ class AppRouter {
       final isOnOpeningPage = state.matchedLocation == '/';
       
       // If not logged in and trying to access protected routes
-      if (!isLoggedIn && !isOnAuthPage && !isOnOpeningPage) {
+      if (!isLoggedIn && !isOnAuthPage && !isOnOpeningPage ) {
         return '/login';
       }
       
-      // If logged in and trying to access auth pages
+      // If logged in and trying to access auth pages (but not profile completion)
       if (isLoggedIn && isOnAuthPage) {
         return '/home';
       }

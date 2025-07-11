@@ -173,8 +173,14 @@ class ApiService {
   // Get Posts Feed from Social Service
   static Future<List<dynamic>> getPostsFeed() async {
     try {
+      final userId = await Storage.getUserId();
+      String url = '${socialServiceUrl}features/getPostUserFeed';
+      if (userId != null) {
+        url += '?userId=$userId';
+      }
+      
       final response = await http.get(
-        Uri.parse('${socialServiceUrl}features/getPostUserFeed'),
+        Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
         },

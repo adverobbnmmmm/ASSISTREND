@@ -95,6 +95,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                   onPressed: () => ref.read(postsProvider.notifier).fetchPosts(),
                   tooltip: 'Refresh Posts',
                 ),
+                IconButton(
+                  icon: const Icon(Icons.comment),
+                  onPressed: () => context.go('/comments-test'),
+                  tooltip: 'Test Comments',
+                ),
               ],
             ),
             body: Stack(

@@ -7,6 +7,9 @@ class Post {
   final int category;
   final DateTime createdAt;
   final String? username;
+  final int likesCount;
+  final bool isLiked;
+  final int commentsCount;
   
   Post({
     required this.id,
@@ -17,6 +20,9 @@ class Post {
     this.audioUrl,
     required this.category,
     required this.createdAt,
+    this.likesCount = 0,
+    this.isLiked = false,
+    this.commentsCount = 0,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -29,6 +35,9 @@ class Post {
       audioUrl: json['audio_url'] as String?,
       category: json['category'] as int,
       createdAt: DateTime.parse(json['created_at'] as String),
+      likesCount: json['likes_count'] as int? ?? 0,
+      isLiked: json['is_liked'] as bool? ?? false,
+      commentsCount: json['comments_count'] as int? ?? 0,
     );
   }
 
@@ -42,6 +51,37 @@ class Post {
       'audio_url': audioUrl,
       'category': category,
       'created_at': createdAt.toIso8601String(),
+      'likes_count': likesCount,
+      'is_liked': isLiked,
+      'comments_count': commentsCount,
     };
+  }
+
+  Post copyWith({
+    int? id,
+    int? user,
+    String? username,
+    String? caption,
+    String? imageUrl,
+    String? audioUrl,
+    int? category,
+    DateTime? createdAt,
+    int? likesCount,
+    bool? isLiked,
+    int? commentsCount,
+  }) {
+    return Post(
+      id: id ?? this.id,
+      user: user ?? this.user,
+      username: username ?? this.username,
+      caption: caption ?? this.caption,
+      imageUrl: imageUrl ?? this.imageUrl,
+      audioUrl: audioUrl ?? this.audioUrl,
+      category: category ?? this.category,
+      createdAt: createdAt ?? this.createdAt,
+      likesCount: likesCount ?? this.likesCount,
+      isLiked: isLiked ?? this.isLiked,
+      commentsCount: commentsCount ?? this.commentsCount,
+    );
   }
 }
