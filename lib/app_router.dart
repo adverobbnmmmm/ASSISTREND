@@ -16,6 +16,8 @@ import 'features/profile/presentation/edit_profile.dart';
 import 'features/upload/presentation/upload.dart';
 import 'features/search/presentation/search_page.dart';
 import 'features/home/presentation/comments_test_page.dart';
+import 'debug_logout.dart';
+import 'simple_logout_test.dart';
 
 /// The router configuration for the app using GoRouter
 class AppRouter {
@@ -102,6 +104,16 @@ class AppRouter {
         builder: (context, state) => const CommentsTestPage(),
       ),
       GoRoute(
+        path: '/debug-logout',
+        name: 'debugLogout',
+        builder: (context, state) => const DebugLogout(),
+      ),
+      GoRoute(
+        path: '/simple-logout-test',
+        name: 'simpleLogoutTest',
+        builder: (context, state) => const SimpleLogoutTest(),
+      ),
+      GoRoute(
         path: '/more-posts',
         name: 'morePosts',
         builder: (context, state) => const SeeMorePostsPage(),
@@ -127,20 +139,29 @@ class AppRouter {
     try {
       // Get current auth status
       final prefs = await SharedPreferences.getInstance();
-      final isLoggedIn = prefs.getString('access_token') != null;
-      final isOnAuthPage = state.matchedLocation == '/login' || 
-                          state.matchedLocation == '/signup' || 
-                          state.matchedLocation == '/forgot-password' ||
-                          state.matchedLocation == '/otp-verification';
-      final isOnOpeningPage = state.matchedLocation == '/';
+      final token = prefs.getString('access_token');
+      final userId = prefs.getInt('user_id');
+      final isLoggedIn = token != null && userId != null;
+      
+      final currentPath = state.matchedLocation;
+      final isOnAuthPage = currentPath == '/login' || 
+                          currentPath == '/signup' || 
+                          currentPath == '/forgot-password' ||
+                          currentPath == '/otp-verification';
+      final isOnOpeningPage = currentPath == '/';
+      
+      // Debug logging
+      print('Router redirect - Path: $currentPath, IsLoggedIn: $isLoggedIn');
       
       // If not logged in and trying to access protected routes
-      if (!isLoggedIn && !isOnAuthPage && !isOnOpeningPage ) {
+      if (!isLoggedIn && !isOnAuthPage && !isOnOpeningPage) {
+        print('Redirecting to login from: $currentPath');
         return '/login';
       }
       
-      // If logged in and trying to access auth pages (but not profile completion)
+      // If logged in and trying to access auth pages
       if (isLoggedIn && isOnAuthPage) {
+        print('Redirecting to home from: $currentPath');
         return '/home';
       }
       
