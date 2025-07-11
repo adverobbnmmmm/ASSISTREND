@@ -58,26 +58,50 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> register(String name, String email, String phone, String password, bool privacyPolicyAccepted) async {
     try {
+      print('Starting registration for email: $email');
       state = state.copyWith(status: AuthStatus.registering);
 
-      await ApiService.register(name, email, phone, password, privacyPolicyAccepted);
+      final response = await ApiService.register(name, email, phone, password, privacyPolicyAccepted);
+      print('Registration response: $response');
 
       // After registration, the user still needs to verify OTP, so we stay unauthenticated
       state = AuthState.unauthenticated();
+      print('Registration successful - awaiting OTP verification');
     } catch (e) {
+      print('Registration failed: $e');
       state = AuthState.error('Registration failed: $e');
     }
   }  Future<void> verifyOTP(String email, String otp) async {
     try {
+      print('Starting OTP verification for email: $email');
       state = state.copyWith(status: AuthStatus.authenticating);
 
-      await ApiService.verifyOTP(email, otp);
+      final response = await ApiService.verifyOTP(email, otp);
+      print('OTP verification response: $response');
+      
+      // Backend returns JWT tokens after successful OTP verification
+      final accessToken = response['access'];
+      final refreshToken = response['refresh'];
+      final userId = response['userId'];
 
-      // Typically the OTP verification would return tokens, but if not,
-      // the user would need to login separately
-      state = AuthState.unauthenticated();
+      print('Tokens received - Access: ${accessToken != null ? 'present' : 'null'}, UserId: $userId');
+
+      // Store tokens and user ID
+      await Storage.saveToken(accessToken);
+      await Storage.saveRefreshToken(refreshToken);
+      await Storage.saveUserId(userId);
+
+      // Update state to authenticated
+      state = AuthState.authenticated(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        userId: userId,
+      );
+      
+      print('OTP verification successful - User authenticated');
       
     } catch (e) {
+      print('OTP verification failed: $e');
       state = AuthState.error('OTP verification failed: $e');
     }
   }

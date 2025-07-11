@@ -2,7 +2,6 @@ import 'package:assistrend/features/home/presentation/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'main.dart';
 import 'assistrend_opening.dart';
 import 'assistrend_forgotpass.dart';
@@ -13,6 +12,7 @@ import 'features/profile/models/profile_model.dart';
 import 'features/profile/presentation/profile.dart';
 import 'features/profile/presentation/more_post.dart';
 import 'features/profile/presentation/edit_profile.dart';
+import 'features/profile/presentation/profile_setup_screen.dart';
 import 'features/upload/presentation/upload.dart';
 import 'features/search/presentation/search_page.dart';
 import 'features/home/presentation/comments_test_page.dart';
@@ -66,8 +66,12 @@ class AppRouter {
         },
       ),
       
-      // Profile completion screen (shown after login if profile is incomplete)
-
+      // Profile setup screen (shown after OTP verification)
+      GoRoute(
+        path: '/profile-setup',
+        name: 'profileSetup',
+        builder: (context, state) => ProfileSetupScreen(),
+      ),
       
       // Main app routes (protected, with bottom navigation)
       ShellRoute(
@@ -147,11 +151,14 @@ class AppRouter {
       final isOnAuthPage = currentPath == '/login' || 
                           currentPath == '/signup' || 
                           currentPath == '/forgot-password' ||
-                          currentPath == '/otp-verification';
+                          currentPath == '/otp-verification' ||
+                          currentPath == '/profile-setup';
       final isOnOpeningPage = currentPath == '/';
       
       // Debug logging
       print('Router redirect - Path: $currentPath, IsLoggedIn: $isLoggedIn');
+      print('Router redirect - IsOnAuthPage: $isOnAuthPage');
+      print('Router redirect - IsOnOpeningPage: $isOnOpeningPage');
       
       // If not logged in and trying to access protected routes
       if (!isLoggedIn && !isOnAuthPage && !isOnOpeningPage) {

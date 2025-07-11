@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_service.dart';
-import 'otp_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../models/auth_state.dart';
+import 'package:go_router/go_router.dart';
 
 class AssistrendSignUp extends ConsumerStatefulWidget {
   @override
@@ -15,10 +15,10 @@ class AssistrendSignUp extends ConsumerStatefulWidget {
 class _AssistrendSignUpState extends ConsumerState<AssistrendSignUp> {
   bool isRememberMeChecked = false;
   bool _privacyPolicyAccepted = false;
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController(text: 'jefin10');
+  final TextEditingController _emailController = TextEditingController(text: 'jefinfrancis4u@gmail.com');
+  final TextEditingController _passwordController = TextEditingController(text: 'jefin@123J');
+  final TextEditingController _phoneController = TextEditingController(text: '9946381688');
   bool _isLoading = false;
 
   @override
@@ -42,6 +42,32 @@ class _AssistrendSignUpState extends ConsumerState<AssistrendSignUp> {
   }
 
   Future<void> _handleSignUp() async {
+    // Validate form fields
+    if (_nameController.text.isEmpty) {
+      _showError('Please enter your name');
+      return;
+    }
+    
+    if (_emailController.text.isEmpty) {
+      _showError('Please enter your email');
+      return;
+    }
+    
+    if (_phoneController.text.isEmpty) {
+      _showError('Please enter your phone number');
+      return;
+    }
+    
+    if (_passwordController.text.isEmpty) {
+      _showError('Please enter a password');
+      return;
+    }
+    
+    if (!_privacyPolicyAccepted) {
+      _showError('Please accept the privacy policy');
+      return;
+    }
+    
     setState(() {
       _isLoading = true;
     });
@@ -56,16 +82,18 @@ class _AssistrendSignUpState extends ConsumerState<AssistrendSignUp> {
         _privacyPolicyAccepted,
       );
 
+      // Debug logging
+      print('DEBUG: Registration completed, navigating to OTP verification');
+      print('DEBUG: Email: ${_emailController.text}');
+      
       // Navigate to OTP screen
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OTPScreen(email: _emailController.text),
-          ),
-        );
+        print('DEBUG: About to navigate to OTP screen');
+        context.go('/otp-verification?email=${Uri.encodeComponent(_emailController.text)}');
+        print('DEBUG: Navigation command sent');
       }
     } catch (e) {
+      print('DEBUG: Registration failed with error: $e');
       _showError('Registration failed: $e');
     } finally {
       if (mounted) {
@@ -87,8 +115,16 @@ class _AssistrendSignUpState extends ConsumerState<AssistrendSignUp> {
   Widget build(BuildContext context) {
     // Listen to auth state changes
     ref.listen(authProvider, (previous, current) {
+      print('DEBUG: Auth state changed in signup');
+      print('DEBUG: Previous status: ${previous?.status}');
+      print('DEBUG: Current status: ${current.status}');
+      
       if (current.status == AuthStatus.error && current.errorMessage != null) {
+        print('DEBUG: Registration error: ${current.errorMessage}');
         _showError(current.errorMessage!);
+      } else if (current.status == AuthStatus.unauthenticated && previous?.status == AuthStatus.registering) {
+        print('DEBUG: Registration successful, should navigate to OTP');
+        // This is where we should navigate to OTP, but we're doing it after the API call instead
       }
     });
 
@@ -250,6 +286,11 @@ class _AssistrendSignUpState extends ConsumerState<AssistrendSignUp> {
                           ),
                         ),
               ),
+              SizedBox(height: 20),
+              
+             
+              
+              // Or login with
             ],
           ),
         ),

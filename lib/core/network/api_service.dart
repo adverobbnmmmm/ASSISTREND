@@ -18,6 +18,12 @@ class ApiService {
     };
 
     final uri = Uri.parse('$baseUrl$endpoint');
+    
+    // Debug logging
+    print('DEBUG API: Making $method request to: $uri');
+    print('DEBUG API: Headers: $headers');
+    print('DEBUG API: Body: ${jsonEncode(body)}');
+    
     http.Response response;
 
     try {
@@ -39,6 +45,9 @@ class ApiService {
           throw Exception('Unsupported HTTP method');
       }
 
+      print('DEBUG API: Response status: ${response.statusCode}');
+      print('DEBUG API: Response body: ${response.body}');
+
       if (response.statusCode >= 200 && response.statusCode < 300) {
         // For empty responses
         if (response.body.isEmpty) {
@@ -46,7 +55,23 @@ class ApiService {
         }
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load data: ${response.statusCode}');
+        // Try to parse error message from response body
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            // Look for common error message fields
+            if (errorData.containsKey('message')) {
+              throw Exception(errorData['message']);
+            } else if (errorData.containsKey('error')) {
+              throw Exception(errorData['error']);
+            } else if (errorData.containsKey('detail')) {
+              throw Exception(errorData['detail']);
+            }
+          }
+        } catch (e) {
+          // If JSON parsing fails, fall back to status code error
+        }
+        throw Exception('Request failed with status ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('API request failed: $e');
@@ -194,6 +219,114 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Failed to fetch posts: $e');
+    }
+  }
+
+  // Profile Setup Methods
+  static Future<dynamic> setupProfile(String userId, dynamic profileData) async {
+    final token = await Storage.getToken();
+    return await _makeSocialRequest(
+      'setup-profile/',
+      {
+        'userId': userId,
+        ...profileData.toJson(),
+      },
+      'POST',
+      token,
+    );
+  }
+
+  static Future<dynamic> getInterests() async {
+    final token = await Storage.getToken();
+    return await _makeSocialRequest(
+      'get-interests/',
+      null,
+      'GET',
+      token,
+    );
+  }
+
+  static Future<dynamic> checkProfileExists(String userId) async {
+    final token = await Storage.getToken();
+    return await _makeSocialRequest(
+      'check-profile/?userId=$userId',
+      null,
+      'GET',
+      token,
+    );
+  }
+
+  static Future<dynamic> getUserProfile(String userId) async {
+    final token = await Storage.getToken();
+    return await _makeSocialRequest(
+      'user-profile/?userId=$userId',
+      null,
+      'GET',
+      token,
+    );
+  }
+
+  // Social Service Request Helper
+  static Future<dynamic> _makeSocialRequest(
+    String endpoint,
+    Map<String, dynamic>? body,
+    String method,
+    String? token,
+  ) async {
+    final headers = {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+
+    final uri = Uri.parse('$socialServiceUrl$endpoint');
+    http.Response response;
+
+    try {
+      switch (method) {
+        case 'POST':
+          response = await http.post(
+            uri,
+            headers: headers,
+            body: jsonEncode(body),
+          );
+          break;
+        case 'GET':
+          response = await http.get(
+            uri,
+            headers: headers,
+          );
+          break;
+        default:
+          throw Exception('Unsupported HTTP method');
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        // For empty responses
+        if (response.body.isEmpty) {
+          return {};
+        }
+        return jsonDecode(response.body);
+      } else {
+        // Try to parse error message from response body
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            // Look for common error message fields
+            if (errorData.containsKey('message')) {
+              throw Exception(errorData['message']);
+            } else if (errorData.containsKey('error')) {
+              throw Exception(errorData['error']);
+            } else if (errorData.containsKey('detail')) {
+              throw Exception(errorData['detail']);
+            }
+          }
+        } catch (e) {
+          // If JSON parsing fails, fall back to status code error
+        }
+        throw Exception('Request failed with status ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('API request failed: $e');
     }
   }
 }
