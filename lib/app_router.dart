@@ -151,22 +151,23 @@ class AppRouter {
       final isOnAuthPage = currentPath == '/login' || 
                           currentPath == '/signup' || 
                           currentPath == '/forgot-password' ||
-                          currentPath == '/otp-verification' ||
-                          currentPath == '/profile-setup';
+                          currentPath == '/otp-verification';
       final isOnOpeningPage = currentPath == '/';
+      final isOnProfileSetupPage = currentPath == '/profile-setup';
       
       // Debug logging
       print('Router redirect - Path: $currentPath, IsLoggedIn: $isLoggedIn');
       print('Router redirect - IsOnAuthPage: $isOnAuthPage');
       print('Router redirect - IsOnOpeningPage: $isOnOpeningPage');
+      print('Router redirect - IsOnProfileSetupPage: $isOnProfileSetupPage');
       
       // If not logged in and trying to access protected routes
-      if (!isLoggedIn && !isOnAuthPage && !isOnOpeningPage) {
+      if (!isLoggedIn && !isOnAuthPage && !isOnOpeningPage && !isOnProfileSetupPage) {
         print('Redirecting to login from: $currentPath');
         return '/login';
       }
       
-      // If logged in and trying to access auth pages
+      // If logged in and trying to access auth pages (but not profile setup)
       if (isLoggedIn && isOnAuthPage) {
         print('Redirecting to home from: $currentPath');
         return '/home';

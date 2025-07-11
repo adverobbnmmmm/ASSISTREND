@@ -81,18 +81,25 @@ class _OTPScreenState extends ConsumerState<OTPScreen> {
       if (current.status == AuthStatus.authenticated) {
         // Check if user has completed profile setup
         final userId = current.userId;
+        print('DEBUG OTP: User authenticated, userId: $userId');
         if (userId != null) {
           try {
+            print('DEBUG OTP: Checking profile exists for userId: $userId');
             final response = await ApiService.checkProfileExists(userId.toString());
+            print('DEBUG OTP: Profile check response: $response');
             final profileExists = response['profileExists'] ?? false;
+            print('DEBUG OTP: Profile exists: $profileExists');
+            
             if (profileExists) {
               // Profile exists, go to home
+              print('DEBUG OTP: Navigating to home');
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Welcome back to Assistrend!')),
               );
               context.go('/home');
             } else {
               // Profile doesn't exist, go to profile setup
+              print('DEBUG OTP: Navigating to profile setup');
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Please complete your profile setup')),
               );
@@ -100,10 +107,12 @@ class _OTPScreenState extends ConsumerState<OTPScreen> {
             }
           } catch (e) {
             // Error checking profile, go to profile setup to be safe
+            print('DEBUG OTP: Error checking profile: $e');
             context.go('/profile-setup');
           }
         } else {
           // No user ID, go to profile setup
+          print('DEBUG OTP: No user ID, going to profile setup');
           context.go('/profile-setup');
         }
       } else if (current.status == AuthStatus.error && current.errorMessage != null) {

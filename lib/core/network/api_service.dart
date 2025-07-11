@@ -225,8 +225,8 @@ class ApiService {
   // Profile Setup Methods
   static Future<dynamic> setupProfile(String userId, dynamic profileData) async {
     final token = await Storage.getToken();
-    return await _makeSocialRequest(
-      'setup-profile/',
+    return await _makeRequest(
+      'account/setup-profile/',
       {
         'userId': userId,
         ...profileData.toJson(),
@@ -238,8 +238,8 @@ class ApiService {
 
   static Future<dynamic> getInterests() async {
     final token = await Storage.getToken();
-    return await _makeSocialRequest(
-      'get-interests/',
+    return await _makeRequest(
+      'account/get-interests/',
       null,
       'GET',
       token,
@@ -248,8 +248,8 @@ class ApiService {
 
   static Future<dynamic> checkProfileExists(String userId) async {
     final token = await Storage.getToken();
-    return await _makeSocialRequest(
-      'check-profile/?userId=$userId',
+    return await _makeRequest(
+      'account/check-profile/?userId=$userId',
       null,
       'GET',
       token,
@@ -258,75 +258,11 @@ class ApiService {
 
   static Future<dynamic> getUserProfile(String userId) async {
     final token = await Storage.getToken();
-    return await _makeSocialRequest(
-      'user-profile/?userId=$userId',
+    return await _makeRequest(
+      'account/user-profile-detail/?userId=$userId',
       null,
       'GET',
       token,
     );
-  }
-
-  // Social Service Request Helper
-  static Future<dynamic> _makeSocialRequest(
-    String endpoint,
-    Map<String, dynamic>? body,
-    String method,
-    String? token,
-  ) async {
-    final headers = {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
-
-    final uri = Uri.parse('$socialServiceUrl$endpoint');
-    http.Response response;
-
-    try {
-      switch (method) {
-        case 'POST':
-          response = await http.post(
-            uri,
-            headers: headers,
-            body: jsonEncode(body),
-          );
-          break;
-        case 'GET':
-          response = await http.get(
-            uri,
-            headers: headers,
-          );
-          break;
-        default:
-          throw Exception('Unsupported HTTP method');
-      }
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        // For empty responses
-        if (response.body.isEmpty) {
-          return {};
-        }
-        return jsonDecode(response.body);
-      } else {
-        // Try to parse error message from response body
-        try {
-          final errorData = jsonDecode(response.body);
-          if (errorData is Map<String, dynamic>) {
-            // Look for common error message fields
-            if (errorData.containsKey('message')) {
-              throw Exception(errorData['message']);
-            } else if (errorData.containsKey('error')) {
-              throw Exception(errorData['error']);
-            } else if (errorData.containsKey('detail')) {
-              throw Exception(errorData['detail']);
-            }
-          }
-        } catch (e) {
-          // If JSON parsing fails, fall back to status code error
-        }
-        throw Exception('Request failed with status ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('API request failed: $e');
-    }
   }
 }
