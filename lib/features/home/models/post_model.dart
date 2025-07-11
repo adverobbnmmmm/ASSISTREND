@@ -7,6 +7,8 @@ class Post {
   final int category;
   final DateTime createdAt;
   final String? username;
+  final int likesCount;
+  final bool isLiked;
   
   Post({
     required this.id,
@@ -17,6 +19,8 @@ class Post {
     this.audioUrl,
     required this.category,
     required this.createdAt,
+    this.likesCount = 0,
+    this.isLiked = false,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -29,6 +33,8 @@ class Post {
       audioUrl: json['audio_url'] as String?,
       category: json['category'] as int,
       createdAt: DateTime.parse(json['created_at'] as String),
+      likesCount: json['likes_count'] as int? ?? 0,
+      isLiked: json['is_liked'] as bool? ?? false,
     );
   }
 
@@ -42,6 +48,8 @@ class Post {
       'audio_url': audioUrl,
       'category': category,
       'created_at': createdAt.toIso8601String(),
+      'likes_count': likesCount,
+      'is_liked': isLiked,
     };
   }
 }

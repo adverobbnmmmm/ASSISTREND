@@ -43,6 +43,8 @@ class AudioPlayerService {
         _currentPosition = Duration.zero;
         isPlayingNotifier.value = false;
         positionNotifier.value = Duration.zero;
+        // Audio automatically restarts from beginning when finished
+        // No need to manually restart, user can click play again
       });
     }
   }

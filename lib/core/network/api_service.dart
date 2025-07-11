@@ -46,7 +46,39 @@ class ApiService {
         }
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load data: ${response.statusCode}');
+        // Try to extract error message from response body
+        String errorMessage = 'Request failed with status ${response.statusCode}';
+        try {
+          if (response.body.isNotEmpty) {
+            final errorBody = jsonDecode(response.body);
+            if (errorBody is Map) {
+              // Handle different error response formats
+              if (errorBody.containsKey('message')) {
+                errorMessage = errorBody['message'];
+              } else if (errorBody.containsKey('error')) {
+                errorMessage = errorBody['error'];
+              } else if (errorBody.containsKey('detail')) {
+                errorMessage = errorBody['detail'];
+              } else {
+                // Handle field-specific errors (common in Django REST framework)
+                final errors = <String>[];
+                errorBody.forEach((key, value) {
+                  if (value is List) {
+                    errors.add('$key: ${value.join(', ')}');
+                  } else if (value is String) {
+                    errors.add('$key: $value');
+                  }
+                });
+                if (errors.isNotEmpty) {
+                  errorMessage = errors.join('; ');
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // If we can't parse the error response, use the default message
+        }
+        throw Exception(errorMessage);
       }
     } catch (e) {
       throw Exception('API request failed: $e');
@@ -63,6 +95,7 @@ class ApiService {
         'email': email,
         'phone': phone,
         'password': password,
+        'description': '', // Add empty description as it's required in serializer fields
         'privacy_policy_accepted': privacy_policy_accepted,
       },
       'POST',
@@ -173,8 +206,13 @@ class ApiService {
   // Get Posts Feed from Social Service
   static Future<List<dynamic>> getPostsFeed() async {
     try {
+      final userId = await Storage.getUserId();
+      final uri = userId != null 
+        ? Uri.parse('${socialServiceUrl}features/getPostUserFeed?userId=$userId')
+        : Uri.parse('${socialServiceUrl}features/getPostUserFeed');
+        
       final response = await http.get(
-        Uri.parse('${socialServiceUrl}features/getPostUserFeed'),
+        uri,
         headers: {
           'Content-Type': 'application/json',
         },

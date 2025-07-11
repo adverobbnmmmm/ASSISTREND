@@ -4,7 +4,7 @@ import 'postbottombar.dart';
 import 'postheadbar.dart';
 import '../models/post_model.dart';
 import '../widgets/network_video_player.dart';
-import '../widgets/audio_player_widget.dart';
+import '../widgets/instagram_audio_player.dart';
 
 class AppPosts extends StatelessWidget {
   const AppPosts({super.key, this.img, this.post});
@@ -104,7 +104,9 @@ class AppPosts extends StatelessWidget {
             Builder(
               builder: (context) {
                 debugPrint('AppPosts: Audio URL detected: ${post!.audioUrl}');
-                return AudioPlayerWidget(audioUrl: post!.audioUrl!);
+                return InstagramAudioPlayer(
+                  audioUrl: post!.audioUrl!,
+                );
               },
             ),
           ] else if (post?.audioUrl != null) ...[
@@ -116,7 +118,7 @@ class AppPosts extends StatelessWidget {
               },
             ),
           ],
-          const PostBottomBar(),
+          PostBottomBar(post: post),
         ],
       ),
     );

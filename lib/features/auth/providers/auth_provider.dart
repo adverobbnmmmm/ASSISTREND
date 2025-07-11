@@ -60,14 +60,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = AuthState.error('Registration failed: $e');
     }
-  }
-
-  Future<void> verifyOTP(String email, String otp) async {
+  }  Future<void> verifyOTP(String email, String otp) async {
     try {
       state = state.copyWith(status: AuthStatus.authenticating);
 
-      final response = await ApiService.verifyOTP(email, otp);
-      
+      await ApiService.verifyOTP(email, otp);
+
       // Typically the OTP verification would return tokens, but if not,
       // the user would need to login separately
       state = AuthState.unauthenticated();
@@ -96,6 +94,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState.unauthenticated();
     } catch (e) {
       state = AuthState.error('Logout failed: $e');
+    }
+  }
+
+  Future<void> loginWithGoogle(String accessToken, String refreshToken, int userId) async {
+    try {
+      state = state.copyWith(status: AuthStatus.authenticating);
+
+      // Store tokens and user ID
+      await Storage.saveToken(accessToken);
+      await Storage.saveRefreshToken(refreshToken);
+      await Storage.saveUserId(userId);
+
+      // Update state
+      state = AuthState.authenticated(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        userId: userId,
+      );
+    } catch (e) {
+      state = AuthState.error('Google login failed: $e');
     }
   }
 }

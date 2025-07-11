@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AssistrendOpening extends StatefulWidget {
   @override
@@ -53,13 +55,15 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
     // Check if user is logged in
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
+    final userIdStr = prefs.getString('user_id');
     print('DEBUG: Token in opening screen: $token');
-    final isLoggedIn = token != null;
+    final isLoggedIn = token != null && userIdStr != null;
     
     // Navigate to the appropriate screen using GoRouter
     if (!mounted) return;
     
     if (isLoggedIn) {
+      // For existing users, go directly to home
       context.go('/home');
     } else {
       context.go('/login');

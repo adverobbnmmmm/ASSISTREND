@@ -20,6 +20,32 @@ class _AssistrendSignUpState extends ConsumerState<AssistrendSignUp> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
+  String? _passwordError;
+
+  bool _isPasswordValid(String password) {
+    // Check if password meets backend requirements
+    if (password.length < 8 || password.length > 25) return false;
+    if (!password.contains(RegExp(r'[a-z]'))) return false; // lowercase
+    if (!password.contains(RegExp(r'[A-Z]'))) return false; // uppercase
+    if (!password.contains(RegExp(r'[0-9]'))) return false; // number
+    if (!password.contains(RegExp(r'[@$!%*?&]'))) return false; // special char
+    return true;
+  }
+
+  bool _isEmailValid(String email) {
+    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
+  }
+
+  String _getPasswordErrorMessage(String password) {
+    if (password.isEmpty) return 'Password is required';
+    if (password.length < 8) return 'Password must be at least 8 characters';
+    if (password.length > 25) return 'Password must be less than 25 characters';
+    if (!password.contains(RegExp(r'[a-z]'))) return 'Password must contain a lowercase letter';
+    if (!password.contains(RegExp(r'[A-Z]'))) return 'Password must contain an uppercase letter';
+    if (!password.contains(RegExp(r'[0-9]'))) return 'Password must contain a number';
+    if (!password.contains(RegExp(r'[@$!%*?&]'))) return 'Password must contain a special character (@\$!%*?&)';
+    return '';
+  }
 
   @override
   void initState() {
@@ -42,6 +68,37 @@ class _AssistrendSignUpState extends ConsumerState<AssistrendSignUp> {
   }
 
   Future<void> _handleSignUp() async {
+    // Validate all fields before proceeding
+    if (_nameController.text.trim().isEmpty) {
+      _showError('Name is required');
+      return;
+    }
+    
+    if (_emailController.text.trim().isEmpty) {
+      _showError('Email is required');
+      return;
+    }
+    
+    if (!_isEmailValid(_emailController.text.trim())) {
+      _showError('Please enter a valid email address');
+      return;
+    }
+    
+    if (_phoneController.text.trim().isEmpty) {
+      _showError('Phone number is required');
+      return;
+    }
+    
+    if (!_isPasswordValid(_passwordController.text)) {
+      _showError(_getPasswordErrorMessage(_passwordController.text));
+      return;
+    }
+    
+    if (!_privacyPolicyAccepted) {
+      _showError('You must accept the privacy policy to register');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -49,9 +106,9 @@ class _AssistrendSignUpState extends ConsumerState<AssistrendSignUp> {
     try {
       // Use the Riverpod provider to register
       await ref.read(authProvider.notifier).register(
-        _nameController.text,
-        _emailController.text,
-        _phoneController.text,
+        _nameController.text.trim(),
+        _emailController.text.trim(),
+        _phoneController.text.trim(),
         _passwordController.text,
         _privacyPolicyAccepted,
       );
@@ -61,7 +118,7 @@ class _AssistrendSignUpState extends ConsumerState<AssistrendSignUp> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => OTPScreen(email: _emailController.text),
+            builder: (context) => OTPScreen(email: _emailController.text.trim()),
           ),
         );
       }
@@ -178,20 +235,87 @@ class _AssistrendSignUpState extends ConsumerState<AssistrendSignUp> {
                 ),
               ),
               SizedBox(height: 20),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                style: TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Create your password',
-                  labelStyle: TextStyle(color: Colors.grey),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.blueAccent),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    style: TextStyle(color: Colors.white),
+                    onChanged: (value) {
+                      setState(() {
+                        _passwordError = _isPasswordValid(value) ? null : _getPasswordErrorMessage(value);
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Create your password',
+                      labelStyle: TextStyle(color: Colors.grey),
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                          color: _passwordError != null ? Colors.red : Colors.blueAccent,
+                        ),
+                      ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                          color: _passwordError != null ? Colors.red : Colors.blueAccent,
+                        ),
+                      ),
+                    ),
                   ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.blueAccent),
-                  ),
-                ),
+                  if (_passwordError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        _passwordError!,
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  if (_passwordController.text.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Password requirements:',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '• 8-25 characters\n• Uppercase letter (A-Z)\n• Lowercase letter (a-z)\n• Number (0-9)\n• Special character (@\$!%*?&)',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_passwordController.text.isNotEmpty && _passwordError == null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            'Password meets all requirements',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
               SizedBox(height: 10),
               Row(

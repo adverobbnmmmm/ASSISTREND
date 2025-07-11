@@ -2,8 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/network/api_service.dart';
-import '../../../shared/utils/storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -28,6 +26,7 @@ class _AssistrendLoginState extends ConsumerState<AssistrendLogin> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authState = ref.read(authProvider);
       if (authState.status == AuthStatus.authenticated) {
+        // Always go to home after login
         context.go('/home');
       } else if (authState.status == AuthStatus.error) {
         _showError(authState.errorMessage ?? 'Authentication error');
@@ -96,16 +95,14 @@ class _AssistrendLoginState extends ConsumerState<AssistrendLogin> {
         final String backendRefreshToken = responseData['refresh'] ?? '';
         final int userId = responseData['userId'] ?? 0;
 
-        // Store the tokens and user ID using Riverpod state
-        ref.read(authProvider.notifier).state = AuthState.authenticated(
-          accessToken: backendAccessToken,
-          refreshToken: backendRefreshToken,
-          userId: userId,
+        // Use the auth provider method for Google login
+        await ref.read(authProvider.notifier).loginWithGoogle(
+          backendAccessToken,
+          backendRefreshToken,
+          userId,
         );
 
-        if (context.mounted) {
-          context.go('/home');
-        }
+        // Navigation will be handled by the listener
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Google Sign-In failed. Please try again.')),
@@ -124,6 +121,7 @@ class _AssistrendLoginState extends ConsumerState<AssistrendLogin> {
     // Listen to auth state changes
     ref.listen(authProvider, (previous, current) {
       if (current.status == AuthStatus.authenticated) {
+        // Always go to home after login
         context.go('/home');
       } else if (current.status == AuthStatus.error && current.errorMessage != null) {
         _showError(current.errorMessage!);

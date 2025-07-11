@@ -12,11 +12,8 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
-  // Firebase initialization removed for Windows compatibility
 
   runApp(
-    // Wrap the app with ProviderScope for Riverpod
     ProviderScope(
       child: const MyApp(),
     ),
