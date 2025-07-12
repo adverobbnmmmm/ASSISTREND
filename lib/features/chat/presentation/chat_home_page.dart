@@ -1,6 +1,7 @@
 // chat_home_page.dart
 
 import 'dart:convert';
+import 'dart:async';
 import 'package:assistrend/features/chat/utils/chat_cache.dart';
 import 'package:assistrend/features/chat/utils/message_cache.dart';
 import 'package:assistrend/shared/services/auth_helper.dart';
@@ -27,6 +28,7 @@ class ChatHomePage extends ConsumerStatefulWidget {
 class _ChatHomePageState extends ConsumerState<ChatHomePage> {
   NotificationsSocket? socket;
   int? currentUserId;
+  StreamSubscription? _socketSubscription;
 
   @override
   void initState() {
@@ -35,11 +37,13 @@ class _ChatHomePageState extends ConsumerState<ChatHomePage> {
       await _setup();
       if (!mounted) return;
       await _restoreUnreadFromCache();
+      await _printAllUnreadMessages();
     });
   }
 
   @override
   void dispose() {
+    _socketSubscription?.cancel();
     socket?.dispose();
     super.dispose();
   }
@@ -89,14 +93,65 @@ class _ChatHomePageState extends ConsumerState<ChatHomePage> {
     }
   }
 
+  Future<void> _printAllUnreadMessages() async {
+    debugPrint("🔎 Fetching all unread messages...");
+
+    final data = await ChatCache.load();
+    if (data == null || currentUserId == null) {
+      debugPrint("⚠️ No cached chat data or user ID.");
+      return;
+    }
+
+    final friends = data['friends'] as List<Friend>;
+    final groups = data['groups'] as List<ChatGroup>;
+
+    for (var friend in friends) {
+      final messages = await MessageCache.loadFriendMessages(
+        friend.id,
+        currentUserId!,
+      );
+      final unreadMessages = messages.where((m) => !m.read && !m.isMe).toList();
+
+      if (unreadMessages.isNotEmpty) {
+        debugPrint(
+          "📨 Unread messages from Friend ${friend.name} (ID: ${friend.id}):",
+        );
+        for (var m in unreadMessages) {
+          debugPrint("  • [${m.timestamp}] ${m.content}");
+        }
+      }
+    }
+
+    for (var group in groups) {
+      final messages = await MessageCache.loadGroupMessages(
+        group.id,
+        currentUserId!,
+      );
+      final unreadMessages = messages.where((m) => !m.read && !m.isMe).toList();
+
+      if (unreadMessages.isNotEmpty) {
+        debugPrint(
+          "👥 Unread messages in Group ${group.name} (ID: ${group.id}):",
+        );
+        for (var m in unreadMessages) {
+          debugPrint("  • [${m.timestamp}] ${m.content}");
+        }
+      }
+    }
+
+    debugPrint("✅ Finished printing unread messages.");
+  }
+
   Future<void> _initializeSocket() async {
     final token = await TokenManager.ensureValidToken();
-    if (token == null || currentUserId == null) return;
+    if (token == null || currentUserId == null || !mounted) return;
 
     NotificationsSocket.initialize(token);
     socket = NotificationsSocket.instance!;
-    socket!.stream.listen((event) async {
+    _socketSubscription = socket!.stream.listen((event) async {
+      // Early return if widget is disposed
       if (!mounted) return;
+
       print("📩 WebSocket message: $event");
 
       try {
@@ -111,71 +166,167 @@ class _ChatHomePageState extends ConsumerState<ChatHomePage> {
         }
 
         if (decoded['type'] == 'new_one_to_one_message') {
-          final payload = decoded['payload'];
-          final senderId = payload['sender_id'];
-          final messageId = payload['id'];
-
-          final message = ChatMessage.fromJson(payload, currentUserId!);
-          final existing = await MessageCache.loadFriendMessages(
-            senderId,
-            currentUserId!,
-          );
-
-          final alreadyExists = existing.any((m) => m.id == message.id);
-          if (!alreadyExists) {
-            HapticFeedback.lightImpact();
-            message.read = false;
-            existing.add(message);
-            await MessageCache.saveFriendMessages(senderId, existing);
-
-            if (!mounted) return;
-            final openFriendId = ref.read(openFriendChatIdProvider);
-            if (openFriendId != senderId) {
-              ref.read(friendUnreadProvider.notifier).increment(senderId);
-            }
-          }
-
-          socket!.send({
-            "type": "acknowledge",
-            "chat_type": "friend",
-            "message_id": messageId,
-          });
+          await _handleOneToOneMessage(decoded);
         }
 
         if (decoded['type'] == 'new_group_message') {
-          final payload = decoded['payload'];
-          final groupId = payload['group_id'];
-          final messageId = payload['id'];
-
-          final message = ChatMessage.fromJson(payload, currentUserId!);
-          final existing = await MessageCache.loadGroupMessages(
-            groupId,
-            currentUserId!,
-          );
-
-          final alreadyExists = existing.any((m) => m.id == message.id);
-          if (!alreadyExists) {
-            HapticFeedback.lightImpact();
-            message.read = false;
-            existing.add(message);
-            await MessageCache.saveGroupMessages(groupId, existing);
-
-            if (!mounted) return;
-            final openGroupId = ref.read(openGroupChatIdProvider);
-            if (openGroupId != groupId) {
-              ref.read(groupUnreadProvider.notifier).increment(groupId);
-            }
-          }
-
-          socket!.send({
-            "type": "acknowledge",
-            "chat_type": "group",
-            "message_id": messageId,
-          });
+          await _handleGroupMessage(decoded);
         }
       } catch (e) {
         print("❌ Failed to decode WebSocket message: $e");
       }
+    });
+  }
+
+  Future<void> _handleOneToOneMessage(Map<String, dynamic> decoded) async {
+    if (!mounted) return;
+
+    final payload = decoded['payload'];
+    final senderId = payload['sender_id'];
+    final receiverId =
+        payload['receiver_id'] ?? currentUserId; // Fallback to current user
+    final messageId = payload['id'];
+
+    print(
+      "🔍 Handling one-to-one message: sender=$senderId, receiver=$receiverId, currentUser=$currentUserId",
+    );
+
+    final message = ChatMessage.fromJson(payload, currentUserId!);
+
+    // Determine which friend's chat this message belongs to
+    int friendId;
+    if (senderId == currentUserId) {
+      // Current user sent the message, so the friend is the receiver
+      friendId = receiverId;
+    } else {
+      // Current user received the message, so the friend is the sender
+      friendId = senderId;
+    }
+
+    print("🎯 Message belongs to friend ID: $friendId");
+
+    final existing = await MessageCache.loadFriendMessages(
+      friendId,
+      currentUserId!,
+    );
+
+    // Check mounted state after async operation
+    if (!mounted) return;
+
+    final alreadyExists = existing.any((m) => m.id == message.id);
+    if (!alreadyExists) {
+      existing.add(message);
+      await MessageCache.saveFriendMessages(friendId, existing);
+
+      // Check mounted state after another async operation
+      if (!mounted) return;
+
+      // Only increment unread count if:
+      // 1. The message is not from the current user (message.isMe == false)
+      // 2. The current user doesn't have this friend's chat open
+      if (!message.isMe) {
+        HapticFeedback.lightImpact();
+        try {
+          // Add extra safety check for mounted state
+          if (!mounted) return;
+
+          final openFriendId = ref.read(openFriendChatIdProvider);
+          print(
+            "🔍 Checking if friend $friendId chat is open. Current open: $openFriendId",
+          );
+
+          if (openFriendId != friendId) {
+            // Double-check mounted state before updating
+            if (!mounted) return;
+            ref.read(friendUnreadProvider.notifier).increment(friendId);
+            print("📈 Incremented unread count for friend $friendId");
+          } else {
+            print(
+              "👀 Friend $friendId chat is open, not incrementing unread count",
+            );
+          }
+        } catch (e) {
+          print("❌ Error updating friend unread count: $e");
+          return;
+        }
+      } else {
+        print("📤 Message is from current user, not incrementing unread count");
+      }
+    } else {
+      print("⚠️ Message already exists, skipping");
+    }
+
+    // Check mounted state before sending acknowledgment
+    if (!mounted) return;
+
+    socket?.send({
+      "type": "acknowledge",
+      "chat_type": "friend",
+      "message_id": messageId,
+    });
+  }
+
+  Future<void> _handleGroupMessage(Map<String, dynamic> decoded) async {
+    if (!mounted) return;
+
+    final payload = decoded['payload'];
+    final groupId = payload['group_id'];
+    final messageId = payload['id'];
+
+    print(
+      "🔍 Handling group message: group=$groupId, currentUser=$currentUserId",
+    );
+
+    final message = ChatMessage.fromJson(payload, currentUserId!);
+    final existing = await MessageCache.loadGroupMessages(
+      groupId,
+      currentUserId!,
+    );
+
+    // Check mounted state after async operation
+    if (!mounted) return;
+
+    final alreadyExists = existing.any((m) => m.id == message.id);
+    if (!alreadyExists) {
+      existing.add(message);
+      await MessageCache.saveGroupMessages(groupId, existing);
+
+      // Check mounted state after another async operation
+      if (!mounted) return;
+
+      // Only increment unread count if:
+      // 1. The message is not from the current user (message.isMe == false)
+      // 2. The current user doesn't have this group chat open
+      if (!message.isMe) {
+        HapticFeedback.lightImpact();
+        try {
+          final openGroupId = ref.read(openGroupChatIdProvider);
+          if (openGroupId != groupId) {
+            ref.read(groupUnreadProvider.notifier).increment(groupId);
+            print("📈 Incremented unread count for group $groupId");
+          } else {
+            print(
+              "👀 Group $groupId chat is open, not incrementing unread count",
+            );
+          }
+        } catch (e) {
+          print("❌ Error updating group unread count: $e");
+          return;
+        }
+      } else {
+        print("📤 Message is from current user, not incrementing unread count");
+      }
+    } else {
+      print("⚠️ Message already exists, skipping");
+    }
+
+    // Check mounted state before sending acknowledgment
+    if (!mounted) return;
+
+    socket?.send({
+      "type": "acknowledge",
+      "chat_type": "group",
+      "message_id": messageId,
     });
   }
 
@@ -203,6 +354,9 @@ class _ChatHomePageState extends ConsumerState<ChatHomePage> {
           friendId,
           currentUserId!,
         );
+
+        if (!mounted) return;
+
         final exists = oldMessages.any((m) => m.id == msg['id']);
         if (!exists) {
           oldMessages.add(
@@ -233,6 +387,9 @@ class _ChatHomePageState extends ConsumerState<ChatHomePage> {
           groupId,
           currentUserId!,
         );
+
+        if (!mounted) return;
+
         final exists = oldMessages.any((m) => m.id == msg['id']);
         if (!exists) {
           oldMessages.add(
