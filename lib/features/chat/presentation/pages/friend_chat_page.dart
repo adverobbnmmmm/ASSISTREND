@@ -103,7 +103,10 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
   }
 
   /// ✅ Enhanced message merging with multiple deduplication strategies
-  List<ChatMessage> _mergeMessages(List<ChatMessage> cached, List<ChatMessage> backend) {
+  List<ChatMessage> _mergeMessages(
+    List<ChatMessage> cached,
+    List<ChatMessage> backend,
+  ) {
     // Use backend messages as the source of truth
     final Map<int, ChatMessage> backendMap = {
       for (final msg in backend) msg.id: msg,
@@ -111,20 +114,21 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
 
     // Find cached messages that might not be in backend yet (pending messages)
     final List<ChatMessage> pendingMessages = [];
-    
+
     for (final cachedMsg in cached) {
       bool foundInBackend = false;
-      
+
       // Check if this cached message exists in backend (by ID)
       if (backendMap.containsKey(cachedMsg.id)) {
         foundInBackend = true;
       } else {
         // Check for potential duplicates by content, timestamp, and sender
         // This handles cases where local message has temp ID but backend has real ID
-        foundInBackend = backend.any((backendMsg) => 
-          _messagesAreSimilar(cachedMsg, backendMsg));
+        foundInBackend = backend.any(
+          (backendMsg) => _messagesAreSimilar(cachedMsg, backendMsg),
+        );
       }
-      
+
       if (!foundInBackend) {
         // This is likely a pending message that hasn't reached backend yet
         pendingMessages.add(cachedMsg);
@@ -133,23 +137,25 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
 
     // Combine backend messages with pending messages
     final allMessages = [...backend, ...pendingMessages];
-    
+
     // Sort by timestamp
     allMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-    
+
     return allMessages;
   }
 
   /// ✅ Helper method to check if two messages are likely the same
   bool _messagesAreSimilar(ChatMessage msg1, ChatMessage msg2) {
     // Check if messages are similar enough to be considered duplicates
-    final timeDiff = (msg1.timestamp.millisecondsSinceEpoch - 
-                     msg2.timestamp.millisecondsSinceEpoch).abs();
-    
+    final timeDiff =
+        (msg1.timestamp.millisecondsSinceEpoch -
+                msg2.timestamp.millisecondsSinceEpoch)
+            .abs();
+
     return msg1.content == msg2.content &&
-           msg1.senderId == msg2.senderId &&
-           msg1.receiverId == msg2.receiverId &&
-           timeDiff < 5000; // Within 5 seconds
+        msg1.senderId == msg2.senderId &&
+        msg1.receiverId == msg2.receiverId &&
+        timeDiff < 5000; // Within 5 seconds
   }
 
   void _initSocket() {
@@ -164,21 +170,26 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
       try {
         final data = jsonDecode(event);
 
-        if (data['type'] == 'new_one_to_one_message' &&
-            data['payload']['sender_id'] == widget.friendId) {
+        if (data['type'] == 'new_one_to_one_message') {
           final newMessage = ChatMessage.fromJson(
             data['payload'],
             currentUserId,
           );
           newMessage.read = true;
 
-          // ✅ Enhanced duplicate checking
-          if (_isDuplicateMessage(newMessage)) {
-            debugPrint("🔄 Duplicate message detected, skipping");
-            return;
+          // ✅ Handle both incoming and outgoing messages
+          if (data['payload']['sender_id'] == widget.friendId) {
+            // Incoming message from friend
+            if (_isDuplicateMessage(newMessage)) {
+              debugPrint("🔄 Duplicate incoming message detected, skipping");
+              return;
+            }
+            setState(() => _messages.add(newMessage));
+          } else if (data['payload']['sender_id'] == currentUserId) {
+            // Our own message coming back - replace temporary message
+            _replaceTemporaryMessage(newMessage);
           }
 
-          setState(() => _messages.add(newMessage));
           MessageCache.saveFriendMessages(widget.friendId, _messages);
         }
       } catch (e) {
@@ -187,11 +198,32 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
     });
   }
 
+  /// ✅ Replace temporary message with backend-confirmed message
+  void _replaceTemporaryMessage(ChatMessage confirmedMessage) {
+    final tempMessageIndex = _messages.indexWhere(
+      (msg) => msg.id < 0 && _messagesAreSimilar(msg, confirmedMessage),
+    );
+
+    if (tempMessageIndex != -1) {
+      setState(() {
+        _messages[tempMessageIndex] = confirmedMessage;
+      });
+      debugPrint("✅ Replaced temporary message with confirmed message");
+    } else {
+      // If no temp message found, just add it (shouldn't happen normally)
+      if (!_isDuplicateMessage(confirmedMessage)) {
+        setState(() => _messages.add(confirmedMessage));
+      }
+    }
+  }
+
   /// ✅ Enhanced duplicate detection for incoming messages
   bool _isDuplicateMessage(ChatMessage newMessage) {
-    return _messages.any((existingMsg) => 
-      existingMsg.id == newMessage.id || 
-      _messagesAreSimilar(existingMsg, newMessage));
+    return _messages.any(
+      (existingMsg) =>
+          existingMsg.id == newMessage.id ||
+          _messagesAreSimilar(existingMsg, newMessage),
+    );
   }
 
   void _sendMessage() {
@@ -229,7 +261,7 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
       setState(() => _messages.add(message));
       MessageCache.saveFriendMessages(widget.friendId, _messages);
     }
-    
+
     _controller.clear();
   }
 
@@ -275,26 +307,12 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
                           ),
                         Text(msg.content),
                         const SizedBox(height: 4),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              msg.timestamp.toLocal().toString().split('.')[0],
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color.fromARGB(255, 210, 61, 61),
-                              ),
-                            ),
-                            // ✅ Show pending indicator for temp messages
-                            if (msg.id < 0) ...[
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.schedule,
-                                size: 12,
-                                color: Colors.orange,
-                              ),
-                            ],
-                          ],
+                        Text(
+                          msg.timestamp.toLocal().toString().split('.')[0],
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color.fromARGB(255, 210, 61, 61),
+                          ),
                         ),
                       ],
                     ),

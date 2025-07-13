@@ -181,19 +181,44 @@ class _GroupChatPageState extends ConsumerState<GroupChatPage> {
           final message = ChatMessage.fromJson(data['payload'], currentUserId);
           message.read = true;
 
-          // ✅ Enhanced duplicate checking
-          if (_isDuplicateMessage(message)) {
-            debugPrint("🔄 Duplicate group message detected, skipping");
-            return;
+          // ✅ Handle both incoming and outgoing messages
+          if (data['payload']['sender_id'] == currentUserId) {
+            // Our own message coming back - replace temporary message
+            _replaceTemporaryMessage(message);
+          } else {
+            // Incoming message from other group member
+            if (_isDuplicateMessage(message)) {
+              debugPrint("🔄 Duplicate group message detected, skipping");
+              return;
+            }
+            setState(() => _messages.add(message));
           }
 
-          setState(() => _messages.add(message));
           MessageCache.saveGroupMessages(widget.groupId, _messages);
         }
       } catch (e) {
         debugPrint("❌ Error handling socket data: $e");
       }
     });
+  }
+
+  /// ✅ Replace temporary message with backend-confirmed message
+  void _replaceTemporaryMessage(ChatMessage confirmedMessage) {
+    final tempMessageIndex = _messages.indexWhere(
+      (msg) => msg.id < 0 && _messagesAreSimilar(msg, confirmedMessage),
+    );
+
+    if (tempMessageIndex != -1) {
+      setState(() {
+        _messages[tempMessageIndex] = confirmedMessage;
+      });
+      debugPrint("✅ Replaced temporary group message with confirmed message");
+    } else {
+      // If no temp message found, just add it (shouldn't happen normally)
+      if (!_isDuplicateMessage(confirmedMessage)) {
+        setState(() => _messages.add(confirmedMessage));
+      }
+    }
   }
 
   /// ✅ Enhanced duplicate detection for incoming messages
@@ -286,26 +311,12 @@ class _GroupChatPageState extends ConsumerState<GroupChatPage> {
                           ),
                         Text(msg.content),
                         const SizedBox(height: 4),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              msg.timestamp.toLocal().toString().split('.')[0],
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color.fromARGB(255, 210, 61, 61),
-                              ),
-                            ),
-                            // ✅ Show pending indicator for temp messages
-                            if (msg.id < 0) ...[
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.schedule,
-                                size: 12,
-                                color: Colors.orange,
-                              ),
-                            ],
-                          ],
+                        Text(
+                          msg.timestamp.toLocal().toString().split('.')[0],
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color.fromARGB(255, 210, 61, 61),
+                          ),
                         ),
                       ],
                     ),
