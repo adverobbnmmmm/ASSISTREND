@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/search_result_model.dart';
 import 'package:http/http.dart' as http;

@@ -32,28 +32,28 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
     try {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Center(child: CircularProgressIndicator()),
-      );
+      print('Logout initiated');
       
+      print('Calling logout on auth provider');
       // Use the auth provider to logout
       await ref.read(authProvider.notifier).logout();
       
-      // Close loading dialog and navigate to login
+      print('Logout completed');
+      
+      // Small delay to ensure state is updated
+      await Future.delayed(Duration(milliseconds: 100));
+      
+      // Navigate directly without closing any dialogs
       if (context.mounted) {
-        Navigator.of(context).pop(); // Close dialog
-        context.go('/login');
+        print('Navigating to opening screen');
+        // Navigate to opening screen to trigger proper auth flow
+        context.go('/');
       }
     } catch (e) {
-      // Handle any errors
+      print('Logout error: $e');
+      // Even if logout fails, clear local state and navigate
       if (context.mounted) {
-        Navigator.of(context).pop(); // Close dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Logout failed: $e')),
-        );
+        context.go('/');
       }
     }
   }
@@ -91,9 +91,24 @@ class _HomePageState extends ConsumerState<HomePage> {
                   tooltip: 'Logout',
                 ),
                 IconButton(
+                  icon: const Icon(Icons.bug_report),
+                  onPressed: () => context.go('/debug-logout'),
+                  tooltip: 'Debug',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.science),
+                  onPressed: () => context.go('/simple-logout-test'),
+                  tooltip: 'Simple Test',
+                ),
+                IconButton(
                   icon: const Icon(Icons.refresh),
                   onPressed: () => ref.read(postsProvider.notifier).fetchPosts(),
                   tooltip: 'Refresh Posts',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.comment),
+                  onPressed: () => context.go('/comments-test'),
+                  tooltip: 'Test Comments',
                 ),
               ],
             ),

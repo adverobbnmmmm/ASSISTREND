@@ -34,8 +34,7 @@ class UploadState {
   final bool showAudioPrompt; // Show prompt to add audio after image selection
   final bool wantsToAddAudio; // User chose to add audio
   final UploadMedia? audioMedia; // Separate audio file
-  final List<Map<String, dynamic>> taggedUsers;
-
+  
   UploadState({
     this.isLoading = false,
     this.isUploading = false,
@@ -55,7 +54,6 @@ class UploadState {
     this.showAudioPrompt = false,
     this.wantsToAddAudio = false,
     this.audioMedia,
-    this.taggedUsers = const [],
   });
 
   UploadState copyWith({
@@ -77,7 +75,6 @@ class UploadState {
     bool? showAudioPrompt,
     bool? wantsToAddAudio,
     UploadMedia? audioMedia,
-    List<Map<String, dynamic>>? taggedUsers,
   }) {
     return UploadState(
       isLoading: isLoading ?? this.isLoading,
@@ -98,7 +95,6 @@ class UploadState {
       showAudioPrompt: showAudioPrompt ?? this.showAudioPrompt,
       wantsToAddAudio: wantsToAddAudio ?? this.wantsToAddAudio,
       audioMedia: audioMedia ?? this.audioMedia,
-      taggedUsers: taggedUsers ?? this.taggedUsers,
     );
   }
 
@@ -417,12 +413,8 @@ class UploadNotifier extends StateNotifier<UploadState> {
         'caption': state.caption,
         'category': state.category,
       };
-      // Add tagged user IDs if any
-      if (state.taggedUsers.isNotEmpty) {
-        requestBody['taggedUserIds'] = state.taggedUsers.map((u) => u['id']).toList();
-      }
       
-      // Add media and audio URLs if available
+      // Add URLs based on what was uploaded
       if (mediaUrl != null) {
         requestBody['imageUrl'] = mediaUrl;
       }
@@ -600,17 +592,9 @@ class UploadNotifier extends StateNotifier<UploadState> {
     state = state.copyWith(audioMedia: null);
   }
   
-  // Add tagged user
-  void addTaggedUser(Map<String, dynamic> user) {
-    if (!state.taggedUsers.any((u) => u['id'] == user['id'])) {
-      state = state.copyWith(taggedUsers: [...state.taggedUsers, user]);
-    }
-  }
 
-  // Remove tagged user
-  void removeTaggedUser(int userId) {
-    state = state.copyWith(taggedUsers: state.taggedUsers.where((u) => u['id'] != userId).toList());
-  }
+
+
 
   // Upload post - Instagram-like flow
   Future<void> uploadPost() async {

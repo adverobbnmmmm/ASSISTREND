@@ -2,21 +2,22 @@ import 'package:assistrend/features/home/presentation/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'main.dart';
-import 'features/profile/models/profile_model.dart';
-import 'features/search/presentation/search_page.dart';
-
-// Screens
 import 'assistrend_opening.dart';
 import 'assistrend_forgotpass.dart';
-import 'features/profile/presentation/profile.dart';
-import 'features/profile/presentation/more_post.dart';
-import 'features/profile/presentation/edit_profile.dart';
 import 'features/auth/presentation/assistrend_login.dart';
 import 'features/auth/presentation/assistrend_signup.dart';
 import 'features/auth/presentation/otp_screen.dart';
+import 'features/profile/models/profile_model.dart';
+import 'features/profile/presentation/profile.dart';
+import 'features/profile/presentation/more_post.dart';
+import 'features/profile/presentation/edit_profile.dart';
+import 'features/profile/presentation/profile_setup_screen.dart';
 import 'features/upload/presentation/upload.dart';
+import 'features/search/presentation/search_page.dart';
+import 'features/home/presentation/comments_test_page.dart';
+import 'debug_logout.dart';
+import 'simple_logout_test.dart';
 
 /// The router configuration for the app using GoRouter
 class AppRouter {
@@ -54,7 +55,7 @@ class AppRouter {
       GoRoute(
         path: '/forgot-password',
         name: 'forgotPassword',
-        builder: (context, state) => AssistrendForgotpass(),
+        builder: (context, state) => const AssistrendForgotpass(),
       ),
       GoRoute(
         path: '/otp-verification',
@@ -63,6 +64,13 @@ class AppRouter {
           final email = state.uri.queryParameters['email'] ?? '';
           return OTPScreen(email: email);
         },
+      ),
+      
+      // Profile setup screen (shown after OTP verification)
+      GoRoute(
+        path: '/profile-setup',
+        name: 'profileSetup',
+        builder: (context, state) => ProfileSetupScreen(),
       ),
       
       // Main app routes (protected, with bottom navigation)
@@ -83,7 +91,7 @@ class AppRouter {
           GoRoute(
             path: '/profile',
             name: 'profile',
-            builder: (context, state) => ProfilePage(),
+            builder: (context, state) => const ProfilePage(),
           ),
           GoRoute(
             path: '/upload',
@@ -95,9 +103,24 @@ class AppRouter {
       
       // Routes without bottom navigation
       GoRoute(
+        path: '/comments-test',
+        name: 'commentsTest',
+        builder: (context, state) => const CommentsTestPage(),
+      ),
+      GoRoute(
+        path: '/debug-logout',
+        name: 'debugLogout',
+        builder: (context, state) => const DebugLogout(),
+      ),
+      GoRoute(
+        path: '/simple-logout-test',
+        name: 'simpleLogoutTest',
+        builder: (context, state) => const SimpleLogoutTest(),
+      ),
+      GoRoute(
         path: '/more-posts',
         name: 'morePosts',
-        builder: (context, state) => SeeMorePostsPage(),
+        builder: (context, state) => const SeeMorePostsPage(),
       ),
       GoRoute(
         path: '/edit-profile',
@@ -120,20 +143,33 @@ class AppRouter {
     try {
       // Get current auth status
       final prefs = await SharedPreferences.getInstance();
-      final isLoggedIn = prefs.getString('access_token') != null;
-      final isOnAuthPage = state.matchedLocation == '/login' || 
-                          state.matchedLocation == '/signup' || 
-                          state.matchedLocation == '/forgot-password' ||
-                          state.matchedLocation == '/otp-verification';
-      final isOnOpeningPage = state.matchedLocation == '/';
+      final token = prefs.getString('access_token');
+      final userId = prefs.getInt('user_id');
+      final isLoggedIn = token != null && userId != null;
+      
+      final currentPath = state.matchedLocation;
+      final isOnAuthPage = currentPath == '/login' || 
+                          currentPath == '/signup' || 
+                          currentPath == '/forgot-password' ||
+                          currentPath == '/otp-verification';
+      final isOnOpeningPage = currentPath == '/';
+      final isOnProfileSetupPage = currentPath == '/profile-setup';
+      
+      // Debug logging
+      print('Router redirect - Path: $currentPath, IsLoggedIn: $isLoggedIn');
+      print('Router redirect - IsOnAuthPage: $isOnAuthPage');
+      print('Router redirect - IsOnOpeningPage: $isOnOpeningPage');
+      print('Router redirect - IsOnProfileSetupPage: $isOnProfileSetupPage');
       
       // If not logged in and trying to access protected routes
-      if (!isLoggedIn && !isOnAuthPage && !isOnOpeningPage) {
+      if (!isLoggedIn && !isOnAuthPage && !isOnOpeningPage && !isOnProfileSetupPage) {
+        print('Redirecting to login from: $currentPath');
         return '/login';
       }
       
-      // If logged in and trying to access auth pages
+      // If logged in and trying to access auth pages (but not profile setup)
       if (isLoggedIn && isOnAuthPage) {
+        print('Redirecting to home from: $currentPath');
         return '/home';
       }
       

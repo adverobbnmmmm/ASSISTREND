@@ -18,6 +18,12 @@ class ApiService {
     };
 
     final uri = Uri.parse('$baseUrl$endpoint');
+    
+    // Debug logging
+    print('DEBUG API: Making $method request to: $uri');
+    print('DEBUG API: Headers: $headers');
+    print('DEBUG API: Body: ${jsonEncode(body)}');
+    
     http.Response response;
 
     try {
@@ -39,6 +45,9 @@ class ApiService {
           throw Exception('Unsupported HTTP method');
       }
 
+      print('DEBUG API: Response status: ${response.statusCode}');
+      print('DEBUG API: Response body: ${response.body}');
+
       if (response.statusCode >= 200 && response.statusCode < 300) {
         // For empty responses
         if (response.body.isEmpty) {
@@ -46,7 +55,23 @@ class ApiService {
         }
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load data: ${response.statusCode}');
+        // Try to parse error message from response body
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            // Look for common error message fields
+            if (errorData.containsKey('message')) {
+              throw Exception(errorData['message']);
+            } else if (errorData.containsKey('error')) {
+              throw Exception(errorData['error']);
+            } else if (errorData.containsKey('detail')) {
+              throw Exception(errorData['detail']);
+            }
+          }
+        } catch (e) {
+          // If JSON parsing fails, fall back to status code error
+        }
+        throw Exception('Request failed with status ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('API request failed: $e');
@@ -173,8 +198,14 @@ class ApiService {
   // Get Posts Feed from Social Service
   static Future<List<dynamic>> getPostsFeed() async {
     try {
+      final userId = await Storage.getUserId();
+      String url = '${socialServiceUrl}features/getPostUserFeed';
+      if (userId != null) {
+        url += '?userId=$userId';
+      }
+      
       final response = await http.get(
-        Uri.parse('${socialServiceUrl}features/getPostUserFeed'),
+        Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -189,5 +220,49 @@ class ApiService {
     } catch (e) {
       throw Exception('Failed to fetch posts: $e');
     }
+  }
+
+  // Profile Setup Methods
+  static Future<dynamic> setupProfile(String userId, dynamic profileData) async {
+    final token = await Storage.getToken();
+    return await _makeRequest(
+      'account/setup-profile/',
+      {
+        'userId': userId,
+        ...profileData.toJson(),
+      },
+      'POST',
+      token,
+    );
+  }
+
+  static Future<dynamic> getInterests() async {
+    final token = await Storage.getToken();
+    return await _makeRequest(
+      'account/get-interests/',
+      null,
+      'GET',
+      token,
+    );
+  }
+
+  static Future<dynamic> checkProfileExists(String userId) async {
+    final token = await Storage.getToken();
+    return await _makeRequest(
+      'account/check-profile/?userId=$userId',
+      null,
+      'GET',
+      token,
+    );
+  }
+
+  static Future<dynamic> getUserProfile(String userId) async {
+    final token = await Storage.getToken();
+    return await _makeRequest(
+      'account/user-profile-detail/?userId=$userId',
+      null,
+      'GET',
+      token,
+    );
   }
 }

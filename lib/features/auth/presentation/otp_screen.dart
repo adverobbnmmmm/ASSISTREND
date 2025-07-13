@@ -27,25 +27,43 @@ class _OTPScreenState extends ConsumerState<OTPScreen> {
   }
 
   Future<void> _verifyOTP() async {
+    // Validate OTP input
+    if (_otpController.text.isEmpty) {
+      _showError('Please enter the OTP code');
+      return;
+    }
+    
+    if (_otpController.text.length != 6) {
+      _showError('OTP must be 6 digits');
+      return;
+    }
+
+    // Additional validation: ensure OTP is numeric
+    if (!RegExp(r'^\d{6}$').hasMatch(_otpController.text)) {
+      _showError('OTP must be exactly 6 digits');
+      return;
+    }
+    
     setState(() {
       _isLoading = true;
     });
 
     try {
+      // Debug: Print what we're sending
+      print('DEBUG: Verifying OTP for email: ${widget.email}');
+      print('DEBUG: OTP code: ${_otpController.text}');
+      print('DEBUG: Email length: ${widget.email.length}');
+      print('DEBUG: OTP length: ${_otpController.text.length}');
+      
       // Use the Riverpod provider to verify OTP
       await ref.read(authProvider.notifier).verifyOTP(
-        widget.email,
-        _otpController.text,
+        widget.email.trim().toLowerCase(), // Clean the email
+        _otpController.text.trim(), // Clean the OTP
       );
 
-      // After successful verification, navigate to login
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration successful! Please login.')),
-        );
-        context.go('/login');
-      }
+      // Navigation will be handled by the auth state listener
     } catch (e) {
+      print('DEBUG: OTP verification error: $e');
       _showError('OTP verification failed: $e');
     } finally {
       if (mounted) {
@@ -59,8 +77,45 @@ class _OTPScreenState extends ConsumerState<OTPScreen> {
   @override
   Widget build(BuildContext context) {
     // Listen to auth state changes
-    ref.listen(authProvider, (previous, current) {
-      if (current.status == AuthStatus.error && current.errorMessage != null) {
+    ref.listen(authProvider, (previous, current) async {
+      if (current.status == AuthStatus.authenticated) {
+        // Check if user has completed profile setup
+        final userId = current.userId;
+        print('DEBUG OTP: User authenticated, userId: $userId');
+        if (userId != null) {
+          try {
+            print('DEBUG OTP: Checking profile exists for userId: $userId');
+            final response = await ApiService.checkProfileExists(userId.toString());
+            print('DEBUG OTP: Profile check response: $response');
+            final profileExists = response['profileExists'] ?? false;
+            print('DEBUG OTP: Profile exists: $profileExists');
+            
+            if (profileExists) {
+              // Profile exists, go to home
+              print('DEBUG OTP: Navigating to home');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Welcome back to Assistrend!')),
+              );
+              context.go('/home');
+            } else {
+              // Profile doesn't exist, go to profile setup
+              print('DEBUG OTP: Navigating to profile setup');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Please complete your profile setup')),
+              );
+              context.go('/profile-setup');
+            }
+          } catch (e) {
+            // Error checking profile, go to profile setup to be safe
+            print('DEBUG OTP: Error checking profile: $e');
+            context.go('/profile-setup');
+          }
+        } else {
+          // No user ID, go to profile setup
+          print('DEBUG OTP: No user ID, going to profile setup');
+          context.go('/profile-setup');
+        }
+      } else if (current.status == AuthStatus.error && current.errorMessage != null) {
         _showError(current.errorMessage!);
       }
     });
@@ -73,7 +128,7 @@ class _OTPScreenState extends ConsumerState<OTPScreen> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context); // Go back
+            context.go('login');// Go back
           },
         ),
       ),
@@ -155,6 +210,33 @@ class _OTPScreenState extends ConsumerState<OTPScreen> {
                   ),
                 ),
               ),
+              SizedBox(height: 20),
+              
+              // Debug test button - remove this after testing
+              if (true) // Change to false to hide this button
+                ElevatedButton(
+                  onPressed: () async {
+                    // Test with hardcoded values
+                    try {
+                      print('DEBUG: Testing with hardcoded values');
+                      final testResponse = await ApiService.verifyOTP(
+                        widget.email.trim().toLowerCase(), 
+                        '123456'  // Test OTP
+                      );
+                      print('DEBUG: Test response: $testResponse');
+                      _showError('Test call successful - check console');
+                    } catch (e) {
+                      print('DEBUG: Test error: $e');
+                      _showError('Test error: $e');
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 8),
+                  ),
+                  child: Text('DEBUG TEST', style: TextStyle(color: Colors.white)),
+                ),
+              SizedBox(height: 20),
             ],
           ),
         ),

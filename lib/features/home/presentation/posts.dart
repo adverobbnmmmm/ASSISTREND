@@ -116,7 +116,7 @@ class AppPosts extends StatelessWidget {
               },
             ),
           ],
-          const PostBottomBar(),
+          if (post != null) PostBottomBar(post: post!),
         ],
       ),
     );

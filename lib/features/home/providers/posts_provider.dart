@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/post_model.dart';
 import '../../../core/network/api_service.dart';
+import '../services/social_service.dart';
+import '../../../shared/utils/storage.dart';
 
 // Posts state
 class PostsState {
@@ -47,6 +49,51 @@ class PostsNotifier extends StateNotifier<PostsState> {
         isLoading: false,
         error: e.toString(),
       );
+    }
+  }
+
+  Future<void> toggleLike(int postId) async {
+    try {
+      final userId = await Storage.getUserId();
+      if (userId == null) {
+        state = state.copyWith(error: 'User not authenticated');
+        return;
+      }
+
+      // Find the post and update optimistically
+      final postIndex = state.posts.indexWhere((post) => post.id == postId);
+      if (postIndex == -1) return;
+
+      final post = state.posts[postIndex];
+      final isCurrentlyLiked = post.isLiked;
+      
+      // Optimistic update
+      final updatedPost = post.copyWith(
+        isLiked: !isCurrentlyLiked,
+        likesCount: isCurrentlyLiked ? post.likesCount - 1 : post.likesCount + 1,
+      );
+
+      final updatedPosts = List<Post>.from(state.posts);
+      updatedPosts[postIndex] = updatedPost;
+      state = state.copyWith(posts: updatedPosts);
+
+      // Make API call
+      bool success;
+      if (isCurrentlyLiked) {
+        success = await SocialService.unlikePost(postId, userId);
+      } else {
+        success = await SocialService.likePost(postId, userId);
+      }
+
+      if (!success) {
+        // Revert optimistic update if API call failed
+        updatedPosts[postIndex] = post;
+        state = state.copyWith(posts: updatedPosts, error: 'Failed to update like');
+      }
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      // Revert optimistic update
+      await fetchPosts();
     }
   }
 

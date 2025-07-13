@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 import '../providers/upload_provider.dart';
 import '../services/permission_service.dart';
@@ -515,16 +513,7 @@ class _UploadPageState extends ConsumerState<UploadPage> {
                 // Instagram-like additional options
                 const SizedBox(height: 16),
                 const Divider(height: 1),
-                _buildOptionRow(Icons.tag_faces, 'Tag People', _showTagPeopleDialog),
-                // Show selected tags
-                if (uploadState.taggedUsers != null && uploadState.taggedUsers!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Wrap(
-                      spacing: 8,
-                      children: uploadState.taggedUsers!.map<Widget>((user) => Chip(label: Text(user['name']))).toList(),
-                    ),
-                  ),
+                _buildOptionRow(Icons.tag_faces, 'Tag People', () {}),
                 
                 // Success message
                 if (uploadState.uploadSuccess)
@@ -815,88 +804,4 @@ class _UploadPageState extends ConsumerState<UploadPage> {
     return '$minutesString:$secondsString';
   }
 
-  // Tag People dialog
-  void _showTagPeopleDialog() async {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return _TagPeopleSheet(
-          onTagSelected: (user) {
-            ref.read(uploadProvider.notifier).addTaggedUser(user);
-            Navigator.of(context).pop();
-          },
-        );
-      },
-    );
-  }
-}
-
-// Tag People bottom sheet widget
-class _TagPeopleSheet extends ConsumerStatefulWidget {
-  final Function(Map<String, dynamic> user) onTagSelected;
-  const _TagPeopleSheet({required this.onTagSelected});
-
-  @override
-  ConsumerState<_TagPeopleSheet> createState() => _TagPeopleSheetState();
-}
-
-class _TagPeopleSheetState extends ConsumerState<_TagPeopleSheet> {
-  final TextEditingController _searchController = TextEditingController();
-  List<Map<String, dynamic>> _results = [];
-  bool _loading = false;
-
-  void _searchUsers(String query) async {
-    if (query.isEmpty) {
-      setState(() => _results = []);
-      return;
-    }
-    setState(() => _loading = true);
-    final res = await http.get(Uri.parse('http://10.0.2.2:8001/api/social-service/features/search/users/?q=$query'));
-    if (res.statusCode == 200) {
-      final data = json.decode(res.body);
-      setState(() {
-        _results = List<Map<String, dynamic>>.from(data['results']);
-        _loading = false;
-      });
-    } else {
-      setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: MediaQuery.of(context).viewInsets,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                labelText: 'Search users',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: _searchUsers,
-            ),
-          ),
-          if (_loading)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: CircularProgressIndicator(),
-            ),
-          if (!_loading)
-            ..._results.map((user) => ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person)),
-                  title: Text(user['name'] ?? ''),
-                  subtitle: Text(user['email'] ?? ''),
-                  onTap: () => widget.onTagSelected(user),
-                )),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
 }

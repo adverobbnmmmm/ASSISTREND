@@ -47,21 +47,31 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
   }
   
   Future<void> _checkAuthAndNavigate() async {
-    // Give animation time to play before checking auth and navigating
-    await Future.delayed(Duration(milliseconds: 2000));
+    // Check if we're coming from logout (minimal delay)
+    // Otherwise show normal animation
+    await Future.delayed(Duration(milliseconds: 500));
     
     // Check if user is logged in
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
-    print('DEBUG: Token in opening screen: $token');
-    final isLoggedIn = token != null;
+    final userId = prefs.getInt('user_id');
+    print('DEBUG: Token in opening screen: $token, UserId: $userId');
+    final isLoggedIn = token != null && userId != null;
     
     // Navigate to the appropriate screen using GoRouter
     if (!mounted) return;
     
-    if (isLoggedIn) {
-      context.go('/home');
-    } else {
+    try {
+      if (isLoggedIn) {
+        print('User is logged in, navigating to home');
+        context.go('/home');
+      } else {
+        print('User is not logged in, navigating to login');
+        context.go('/login');
+      }
+    } catch (e) {
+      print('Navigation error in opening screen: $e');
+      // Fallback navigation
       context.go('/login');
     }
   }
