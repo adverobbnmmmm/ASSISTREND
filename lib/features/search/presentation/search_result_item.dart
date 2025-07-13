@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import '../models/search_result_model.dart';
 
