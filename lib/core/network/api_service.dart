@@ -265,4 +265,15 @@ class ApiService {
       token,
     );
   }
+
+  // Test endpoint for debugging
+  static Future<dynamic> testDatabase() async {
+    final token = await Storage.getToken();
+    return await _makeRequest(
+      'account/test-database/',
+      null,
+      'GET',
+      token,
+    );
+  }
 }
