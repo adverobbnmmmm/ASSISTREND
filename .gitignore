@@ -6,7 +6,7 @@
 .packages
 .flutter-versions
 .metadata
-
+.env
 # Build outputs
 /build/
 /ios/Flutter/Flutter.framework
