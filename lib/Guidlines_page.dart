@@ -1,3 +1,4 @@
+import 'package:connect/call_screen.dart';
 import 'package:flutter/material.dart';
 
 class EventFlowScreen extends StatefulWidget {
@@ -61,12 +62,10 @@ class _EventFlowScreenState extends State<EventFlowScreen>
         currentStep++;
       });
     } else {
-      // Start loading when clicking OK on room page
       setState(() {
         isLoading = true;
       });
 
-      // Simulate loading for 3 seconds
       Future.delayed(Duration(seconds: 3), () {
         setState(() {
           isLoading = false;
@@ -100,7 +99,6 @@ class _EventFlowScreenState extends State<EventFlowScreen>
   Widget buildProgressIndicator() {
     return Column(
       children: [
-        // Top row: Guidelines and Conditions
         Row(
           children: [
             buildStepChip('Guidelines', Icons.description, 0),
@@ -124,7 +122,6 @@ class _EventFlowScreenState extends State<EventFlowScreen>
           ],
         ),
         SizedBox(height: 16),
-        // Bottom row: Pool and Room
         Row(
           children: [
             buildStepChip('Pool', Icons.waves, 2),
@@ -197,13 +194,11 @@ class _EventFlowScreenState extends State<EventFlowScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Loading animation
             Container(
               width: 120,
               height: 120,
               child: Stack(
                 children: [
-                  // Outer ring
                   Container(
                     width: 120,
                     height: 120,
@@ -212,7 +207,6 @@ class _EventFlowScreenState extends State<EventFlowScreen>
                       border: Border.all(color: Colors.grey.shade700, width: 4),
                     ),
                   ),
-                  // Spinning ring
                   RotationTransition(
                     turns: _rotationController,
                     child: Container(
@@ -228,7 +222,6 @@ class _EventFlowScreenState extends State<EventFlowScreen>
                       ),
                     ),
                   ),
-                  // Inner profile placeholder
                   Center(
                     child: Container(
                       width: 80,
@@ -248,7 +241,6 @@ class _EventFlowScreenState extends State<EventFlowScreen>
               ),
             ),
             SizedBox(height: 32),
-            // Pulsing dots
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(3, (index) {
@@ -500,7 +492,6 @@ class _EventFlowScreenState extends State<EventFlowScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Top user profile
                 Container(
                   width: 80,
                   height: 80,
@@ -515,19 +506,12 @@ class _EventFlowScreenState extends State<EventFlowScreen>
                   ),
                   child: Icon(Icons.person, color: Colors.white, size: 40),
                 ),
-
                 SizedBox(height: 20),
-
-                // Vertical connecting line
                 Container(width: 3, height: 60, color: Colors.blue.shade400),
-
                 SizedBox(height: 20),
-
-                // Bottom row with AI and third user
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // AI Bot
                     Container(
                       width: 80,
                       height: 80,
@@ -549,16 +533,12 @@ class _EventFlowScreenState extends State<EventFlowScreen>
                         size: 32,
                       ),
                     ),
-
-                    // Horizontal connecting line
                     Container(
                       width: 60,
                       height: 3,
                       color: Colors.blue.shade400,
                       margin: EdgeInsets.symmetric(horizontal: 10),
                     ),
-
-                    // Third user
                     Container(
                       width: 80,
                       height: 80,
@@ -583,10 +563,21 @@ class _EventFlowScreenState extends State<EventFlowScreen>
     );
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return buildLoadingScreen();
+    }
+
+    if (currentStep == 3) {
+      Future.delayed(Duration(seconds: 5), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => CallScreen()),
+        );
+      });
     }
 
     return Scaffold(
