@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dashboard.dart';
 
@@ -138,6 +137,68 @@ class AdditionalProfile {
   }
 }
 
+// Mock Data
+List<Map<String, dynamic>> mockUsers = [
+  {
+    'id': '1',
+    'full_name': 'John Doe',
+    'bio': 'Developer and tech enthusiast',
+    'location': 'New York, NY',
+    'profile_picture': 'https://picsum.photos/150?random=1',
+    'social_links': ['twitter.com/johndoe', 'linkedin.com/in/johndoe'],
+    'reported_posts': [
+      {'id': 'p1', 'content': 'Inappropriate post', 'timestamp': '2025-07-20'},
+    ],
+    'engagement_summary': {'likes': 100, 'comments': 50},
+    'connection': {
+      'summary': 'Connected with team',
+      'is_anonymous': false,
+      'initiation_timestamp': '2025-07-01',
+      'respond_timestamp': '2025-07-02',
+      'feedback': 'Positive collaboration',
+    },
+    'gamification': {
+      'task_status': 'completed',
+      'answers': [
+        {'question': 'Favorite tech?', 'answer': 'Flutter'},
+      ],
+    },
+    'additional_profile': {
+      'nickname': 'JD',
+      'audio_summary': 'audio_url',
+      'highlight_data': 'Top contributor',
+    },
+  },
+  {
+    'id': '2',
+    'full_name': 'Jane Smith',
+    'bio': 'Designer and artist',
+    'location': 'San Francisco, CA',
+    'profile_picture': 'https://picsum.photos/150?random=2',
+    'social_links': ['instagram.com/janesmith'],
+    'reported_posts': [],
+    'engagement_summary': {'likes': 200, 'comments': 80},
+    'connection': {
+      'summary': 'Solo project',
+      'is_anonymous': true,
+      'initiation_timestamp': '2025-07-10',
+      'respond_timestamp': '2025-07-11',
+      'feedback': 'Great work',
+    },
+    'gamification': {
+      'task_status': 'resumed',
+      'answers': [
+        {'question': 'Design tool?', 'answer': 'Figma'},
+      ],
+    },
+    'additional_profile': {
+      'nickname': 'JS',
+      'audio_summary': 'audio_url_2',
+      'highlight_data': 'Creative leader',
+    },
+  },
+];
+
 // Data Provider
 class UserProvider with ChangeNotifier {
   List<User> _users = [];
@@ -164,21 +225,16 @@ class UserProvider with ChangeNotifier {
         _users.clear();
       }
 
-      final response = await http.get(
-        Uri.parse(
-          'https://your-django-api.com/users?page=$_page&size=$_pageSize&search=$_searchQuery&sort=$_sortField&asc=$_sortAscending',
-        ),
-        headers: {
-          'Authorization': 'Bearer your_secure_token',
-          'Content-Type': 'application/json',
-        },
+      // Mock data
+      await Future.delayed(const Duration(milliseconds: 500));
+      final start = (_page - 1) * _pageSize;
+      final end = start + _pageSize;
+      final paginatedUsers = mockUsers.sublist(
+        start,
+        end > mockUsers.length ? mockUsers.length : end,
       );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as List;
-        _users.addAll(data.map((json) => User.fromJson(json)).toList());
-        _page++;
-      }
+      _users.addAll(paginatedUsers.map((json) => User.fromJson(json)).toList());
+      _page++;
     } catch (e) {
       print('Error fetching users: $e');
     } finally {
@@ -188,19 +244,58 @@ class UserProvider with ChangeNotifier {
   }
 
   void setSearchQuery(String query) {
-    _searchQuery = query;
-    fetchUsers();
+    _searchQuery = query.trim();
+
+    if (_searchQuery.isEmpty) {
+      // Reset to show all users from mock data
+      _users = mockUsers.map((json) => User.fromJson(json)).toList();
+    } else {
+      final queryLower = _searchQuery.toLowerCase();
+      _users = mockUsers.map((json) => User.fromJson(json)).where((user) {
+        final fullNameLower = user.fullName.toLowerCase();
+        final bioLower = user.bio.toLowerCase();
+        final locationLower = user.location.toLowerCase();
+        final nicknameLower = user.additionalProfile.nickname.toLowerCase();
+
+        return fullNameLower.contains(queryLower) ||
+            bioLower.contains(queryLower) ||
+            locationLower.contains(queryLower) ||
+            nicknameLower.contains(queryLower);
+      }).toList();
+    }
+    notifyListeners();
   }
 
   void setSort(String field, bool ascending) {
     _sortField = field;
     _sortAscending = ascending;
-    fetchUsers();
+    // Simulate sorting
+    _users.sort((a, b) {
+      final aValue = a.fullName;
+      final bValue = b.fullName;
+      return _sortAscending
+          ? aValue.compareTo(bValue)
+          : bValue.compareTo(aValue);
+    });
+    notifyListeners();
   }
 
   void setFilters(Map<String, dynamic> filters) {
     _filters = filters;
-    fetchUsers();
+    // Simulate filtering by status
+    final status = filters['status'] ?? 'all';
+    _users = mockUsers
+        .map((json) => User.fromJson(json))
+        .where(
+          (user) =>
+              status == 'all' ||
+              (status == 'active' &&
+                  user.gamification.taskStatus == 'completed') ||
+              (status == 'inactive' &&
+                  user.gamification.taskStatus != 'completed'),
+        )
+        .toList();
+    notifyListeners();
   }
 }
 

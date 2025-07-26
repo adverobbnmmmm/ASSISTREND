@@ -12,7 +12,7 @@ class DashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
-        backgroundColor: const Color.fromARGB(255, 14, 30, 110),
+        backgroundColor: const Color(0xFF1A3CDE),
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
           IconButton(
@@ -34,9 +34,7 @@ class DashboardScreen extends StatelessWidget {
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              decoration: BoxDecoration(color: const Color(0xFF1A3CDE)),
               child: Text(
                 'Admin Menu',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -55,7 +53,6 @@ class DashboardScreen extends StatelessWidget {
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
               onTap: () {
-                // Navigate to settings screen (placeholder)
                 Navigator.pop(context);
               },
             ),
@@ -63,7 +60,6 @@ class DashboardScreen extends StatelessWidget {
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
               onTap: () {
-                // Implement logout logic
                 Navigator.pop(context);
               },
             ),
@@ -79,28 +75,15 @@ class DashboardScreen extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text(
-            'Filter Users',
-            style: TextStyle(fontSize: 18), // Smaller title font
-          ),
-          titlePadding: const EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            8,
-          ), // Reduced title padding
-          contentPadding: const EdgeInsets.fromLTRB(
-            16,
-            8,
-            16,
-            8,
-          ), // Reduced content padding
+          title: const Text('Filter Users', style: TextStyle(fontSize: 18)),
+          titlePadding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButton<String>(
                 value: 'all',
-                isDense: true, // Compact dropdown
+                isDense: true,
                 items: const [
                   DropdownMenuItem(value: 'all', child: Text('All')),
                   DropdownMenuItem(value: 'active', child: Text('Active')),
@@ -116,12 +99,7 @@ class DashboardScreen extends StatelessWidget {
               ),
             ],
           ),
-          actionsPadding: const EdgeInsets.fromLTRB(
-            8,
-            0,
-            8,
-            8,
-          ), // Reduced actions padding
+          actionsPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -157,6 +135,10 @@ class _UserListViewState extends State<UserListView> {
         ).fetchUsers(loadMore: true);
       }
     });
+    // Fetch initial users
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<UserProvider>(context, listen: false).fetchUsers();
+    });
   }
 
   @override
@@ -170,7 +152,7 @@ class _UserListViewState extends State<UserListView> {
     final userProvider = Provider.of<UserProvider>(context);
 
     return userProvider.isLoading && userProvider.users.isEmpty
-        ? const Center(child: SpinKitCircle(color: Color(0xFF2E4EF6)))
+        ? const Center(child: SpinKitCircle(color: Color(0xFF1A3CDE)))
         : ListView.builder(
             controller: _scrollController,
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -179,7 +161,7 @@ class _UserListViewState extends State<UserListView> {
             itemBuilder: (context, index) {
               if (index == userProvider.users.length) {
                 return const Center(
-                  child: SpinKitCircle(color: Color(0xFF2E4EF6)),
+                  child: SpinKitCircle(color: Color(0xFF1A3CDE)),
                 );
               }
               return UserCard(user: userProvider.users[index], index: index);
@@ -247,6 +229,9 @@ class _UserCardState extends State<UserCard>
             leading: CircleAvatar(
               backgroundImage: NetworkImage(widget.user.profilePicture),
               radius: 20,
+              onBackgroundImageError: (error, stackTrace) {
+                print('Image load error: $error');
+              },
             ),
             title: Text(
               widget.user.fullName,
@@ -378,6 +363,7 @@ class _UserCardState extends State<UserCard>
 }
 
 // Search Delegate
+// Fixed Search Delegate
 class UserSearchDelegate extends SearchDelegate {
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -403,13 +389,135 @@ class UserSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildResults(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    userProvider.setSearchQuery(query);
-    return const UserListView();
+    // Defer the search query update to avoid build phase error
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<UserProvider>(context, listen: false).setSearchQuery(query);
+    });
+
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        // Filter users based on current query for immediate display
+        final filteredUsers = _getFilteredUsers(userProvider, query);
+
+        if (filteredUsers.isEmpty && query.isNotEmpty) {
+          return const Center(
+            child: Text(
+              'No users found',
+              style: TextStyle(
+                color: Color.fromARGB(184, 255, 255, 255), // Pure red
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: filteredUsers.length,
+          itemBuilder: (context, index) {
+            return UserCard(user: filteredUsers[index], index: index);
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    return const SizedBox.shrink();
+    if (query.isEmpty) {
+      return const Center(child: Text('Enter a search term'));
+    }
+
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        // Get filtered users without calling setSearchQuery during build
+        final filteredUsers = _getFilteredUsers(userProvider, query);
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: filteredUsers.length,
+          itemBuilder: (context, index) {
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundImage: NetworkImage(
+                  filteredUsers[index].profilePicture,
+                ),
+                radius: 20,
+                onBackgroundImageError: (error, stackTrace) {
+                  print('Image load error: $error');
+                },
+              ),
+              title: Text(filteredUsers[index].fullName),
+              subtitle: Text(filteredUsers[index].location),
+              onTap: () {
+                query = filteredUsers[index].fullName;
+                showResults(context);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Helper method to filter users without triggering provider updates
+  List<User> _getFilteredUsers(UserProvider userProvider, String searchQuery) {
+    if (searchQuery.trim().isEmpty) {
+      return userProvider.users;
+    }
+
+    final queryLower = searchQuery.trim().toLowerCase();
+    return userProvider.users.where((user) {
+      final fullNameLower = user.fullName.toLowerCase();
+      final bioLower = user.bio.toLowerCase();
+      final locationLower = user.location.toLowerCase();
+      final nicknameLower = user.additionalProfile.nickname.toLowerCase();
+
+      return fullNameLower.contains(queryLower) ||
+          bioLower.contains(queryLower) ||
+          locationLower.contains(queryLower) ||
+          nicknameLower.contains(queryLower);
+    }).toList();
+  }
+}
+
+// Alternative: Simpler Search Results Widget
+class SearchResultsView extends StatelessWidget {
+  const SearchResultsView({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        if (userProvider.users.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 64,
+                  color: Color.fromARGB(255, 247, 247, 247),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'No users found',
+                  style: TextStyle(color: Color.fromARGB(255, 247, 247, 247)),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: userProvider.users.length,
+          itemBuilder: (context, index) {
+            return UserCard(user: userProvider.users[index], index: index);
+          },
+        );
+      },
+    );
   }
 }
