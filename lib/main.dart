@@ -205,10 +205,6 @@ class UserProvider with ChangeNotifier {
   bool _isLoading = false;
   int _page = 1;
   final int _pageSize = 10;
-  String _searchQuery = '';
-  String _sortField = 'full_name';
-  bool _sortAscending = true;
-  Map<String, dynamic> _filters = {};
 
   List<User> get users => _users;
   bool get isLoading => _isLoading;
@@ -243,59 +239,16 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  void setSearchQuery(String query) {
-    _searchQuery = query.trim();
-
-    if (_searchQuery.isEmpty) {
-      // Reset to show all users from mock data
-      _users = mockUsers.map((json) => User.fromJson(json)).toList();
-    } else {
-      final queryLower = _searchQuery.toLowerCase();
-      _users = mockUsers.map((json) => User.fromJson(json)).where((user) {
-        final fullNameLower = user.fullName.toLowerCase();
-        final bioLower = user.bio.toLowerCase();
-        final locationLower = user.location.toLowerCase();
-        final nicknameLower = user.additionalProfile.nickname.toLowerCase();
-
-        return fullNameLower.contains(queryLower) ||
-            bioLower.contains(queryLower) ||
-            locationLower.contains(queryLower) ||
-            nicknameLower.contains(queryLower);
-      }).toList();
-    }
-    notifyListeners();
+  void logout() {
+    // Handle logout logic here
+    print('User logged out');
+    // You can add navigation to login screen or clear user data here
   }
 
-  void setSort(String field, bool ascending) {
-    _sortField = field;
-    _sortAscending = ascending;
-    // Simulate sorting
-    _users.sort((a, b) {
-      final aValue = a.fullName;
-      final bValue = b.fullName;
-      return _sortAscending
-          ? aValue.compareTo(bValue)
-          : bValue.compareTo(aValue);
-    });
-    notifyListeners();
-  }
-
-  void setFilters(Map<String, dynamic> filters) {
-    _filters = filters;
-    // Simulate filtering by status
-    final status = filters['status'] ?? 'all';
-    _users = mockUsers
-        .map((json) => User.fromJson(json))
-        .where(
-          (user) =>
-              status == 'all' ||
-              (status == 'active' &&
-                  user.gamification.taskStatus == 'completed') ||
-              (status == 'inactive' &&
-                  user.gamification.taskStatus != 'completed'),
-        )
-        .toList();
-    notifyListeners();
+  void userMode() {
+    // Handle logout logic here
+    print('Changed to user mode');
+    // You can add navigation to login screen or clear user data here
   }
 }
 
@@ -322,6 +275,7 @@ class AdminPanelApp extends StatelessWidget {
         useMaterial3: true,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
+      debugShowCheckedModeBanner: false,
       home: const DashboardScreen(),
     );
   }

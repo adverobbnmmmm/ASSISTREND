@@ -16,94 +16,68 @@ class DashboardScreen extends StatelessWidget {
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.logout),
             onPressed: () {
-              showSearch(context: context, delegate: UserSearchDelegate());
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              _showFilterDialog(context);
+              _showLogoutDialog(context);
             },
           ),
         ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(color: const Color(0xFF1A3CDE)),
-              child: Text(
-                'Admin Menu',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.dashboard),
-              title: const Text('Dashboard'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Logout'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-          ],
+        leading: IconButton(
+          icon: const Icon(Icons.home_filled),
+          onPressed: () {
+            _showHomeDialog(context);
+          },
         ),
       ),
       body: const UserListView(),
     );
   }
 
-  void _showFilterDialog(BuildContext context) {
+  void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Filter Users', style: TextStyle(fontSize: 18)),
-          titlePadding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButton<String>(
-                value: 'all',
-                isDense: true,
-                items: const [
-                  DropdownMenuItem(value: 'all', child: Text('All')),
-                  DropdownMenuItem(value: 'active', child: Text('Active')),
-                  DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
-                ],
-                onChanged: (value) {
-                  Provider.of<UserProvider>(
-                    context,
-                    listen: false,
-                  ).setFilters({'status': value});
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Provider.of<UserProvider>(context, listen: false).logout();
+                Navigator.pop(context);
+                // You can add navigation to login screen here
+              },
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showHomeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('User Mode'),
+          content: const Text('Are you sure you want to change to User Mode?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Provider.of<UserProvider>(context, listen: false).userMode();
+                Navigator.pop(context);
+                // navigation to home screen
+              },
+              child: const Text('Yes'),
             ),
           ],
         );
@@ -358,166 +332,6 @@ class _UserCardState extends State<UserCard>
           ),
         ],
       ),
-    );
-  }
-}
-
-// Search Delegate
-// Fixed Search Delegate
-class UserSearchDelegate extends SearchDelegate {
-  @override
-  List<Widget> buildActions(BuildContext context) {
-    return [
-      IconButton(
-        icon: const Icon(Icons.clear),
-        onPressed: () {
-          query = '';
-        },
-      ),
-    ];
-  }
-
-  @override
-  Widget buildLeading(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.arrow_back),
-      onPressed: () {
-        close(context, null);
-      },
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    // Defer the search query update to avoid build phase error
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UserProvider>(context, listen: false).setSearchQuery(query);
-    });
-
-    return Consumer<UserProvider>(
-      builder: (context, userProvider, child) {
-        // Filter users based on current query for immediate display
-        final filteredUsers = _getFilteredUsers(userProvider, query);
-
-        if (filteredUsers.isEmpty && query.isNotEmpty) {
-          return const Center(
-            child: Text(
-              'No users found',
-              style: TextStyle(
-                color: Color.fromARGB(184, 255, 255, 255), // Pure red
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: filteredUsers.length,
-          itemBuilder: (context, index) {
-            return UserCard(user: filteredUsers[index], index: index);
-          },
-        );
-      },
-    );
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    if (query.isEmpty) {
-      return const Center(child: Text('Enter a search term'));
-    }
-
-    return Consumer<UserProvider>(
-      builder: (context, userProvider, child) {
-        // Get filtered users without calling setSearchQuery during build
-        final filteredUsers = _getFilteredUsers(userProvider, query);
-
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: filteredUsers.length,
-          itemBuilder: (context, index) {
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundImage: NetworkImage(
-                  filteredUsers[index].profilePicture,
-                ),
-                radius: 20,
-                onBackgroundImageError: (error, stackTrace) {
-                  print('Image load error: $error');
-                },
-              ),
-              title: Text(filteredUsers[index].fullName),
-              subtitle: Text(filteredUsers[index].location),
-              onTap: () {
-                query = filteredUsers[index].fullName;
-                showResults(context);
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Helper method to filter users without triggering provider updates
-  List<User> _getFilteredUsers(UserProvider userProvider, String searchQuery) {
-    if (searchQuery.trim().isEmpty) {
-      return userProvider.users;
-    }
-
-    final queryLower = searchQuery.trim().toLowerCase();
-    return userProvider.users.where((user) {
-      final fullNameLower = user.fullName.toLowerCase();
-      final bioLower = user.bio.toLowerCase();
-      final locationLower = user.location.toLowerCase();
-      final nicknameLower = user.additionalProfile.nickname.toLowerCase();
-
-      return fullNameLower.contains(queryLower) ||
-          bioLower.contains(queryLower) ||
-          locationLower.contains(queryLower) ||
-          nicknameLower.contains(queryLower);
-    }).toList();
-  }
-}
-
-// Alternative: Simpler Search Results Widget
-class SearchResultsView extends StatelessWidget {
-  const SearchResultsView({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<UserProvider>(
-      builder: (context, userProvider, child) {
-        if (userProvider.users.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.search_off,
-                  size: 64,
-                  color: Color.fromARGB(255, 247, 247, 247),
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'No users found',
-                  style: TextStyle(color: Color.fromARGB(255, 247, 247, 247)),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: userProvider.users.length,
-          itemBuilder: (context, index) {
-            return UserCard(user: userProvider.users[index], index: index);
-          },
-        );
-      },
     );
   }
 }
