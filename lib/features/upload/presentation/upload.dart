@@ -5,6 +5,92 @@ import 'package:go_router/go_router.dart';
 import '../providers/upload_provider.dart';
 import '../services/permission_service.dart';
 import '../widgets/media_preview_card.dart';
+import '../../search/providers/search_providers.dart';
+import '../../search/models/user_model.dart';
+
+// Show dialog to tag people
+void _showTagPeopleDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Consumer(builder: (context, ref, _) {
+        final query = ref.watch(searchQueryProvider);
+        final resultsAsync = ref.watch(searchResultsProvider('profile:' + query));
+        TextEditingController _searchController = TextEditingController(text: query);
+        return AlertDialog(
+          title: const Text('Tag People'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _searchController,
+                  decoration: const InputDecoration(
+                    hintText: 'Search users...',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  onChanged: (value) => ref.read(searchQueryProvider.notifier).state = value,
+                ),
+                const SizedBox(height: 12),
+                resultsAsync.when(
+                  data: (results) {
+                    if (results.isEmpty) {
+                      return const Text('No users found.');
+                    }
+                    return SizedBox(
+                      height: 200,
+                      child: ListView.builder(
+                        itemCount: results.length,
+                        itemBuilder: (context, idx) {
+                          final user = results[idx];
+                          return ListTile(
+                            leading: const CircleAvatar(child: Icon(Icons.person)),
+                            title: Text(user.title),
+                            subtitle: Text(user.subtitle ?? ''),
+                            trailing: Consumer(builder: (context, ref, _) {
+                              final tagged = ref.watch(uploadProvider.select((s) => s.taggedUsers.any((u) => u.id == user.id)));
+                              return tagged
+                                  ? Icon(Icons.check, color: Colors.green)
+                                  : IconButton(
+                                      icon: const Icon(Icons.add),
+                                      onPressed: () {
+                                        ref.read(uploadProvider.notifier).addTaggedUser(
+                                          UserModel(
+                                            id: user.id,
+                                            name: user.title,
+                                            email: user.subtitle ?? '',
+                                            avatarUrl: user.imageUrl,
+                                          ),
+                                        );
+                                      },
+                                    );
+                            }),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                  error: (e, _) => Text('Error: $e'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      });
+    },
+  );
+}
 
 class UploadPage extends ConsumerStatefulWidget {
   const UploadPage({Key? key}) : super(key: key);
@@ -513,8 +599,19 @@ class _UploadPageState extends ConsumerState<UploadPage> {
                 // Instagram-like additional options
                 const SizedBox(height: 16),
                 const Divider(height: 1),
-                _buildOptionRow(Icons.tag_faces, 'Tag People', () {}),
-                
+                _buildOptionRow(Icons.tag_faces, 'Tag People', () => _showTagPeopleDialog(context)),
+                // Show selected tags
+                if (uploadState.taggedUsers.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Wrap(
+                      spacing: 8,
+                      children: uploadState.taggedUsers.map<Widget>((user) => Chip(
+                        label: Text(user.name),
+                        onDeleted: () => ref.read(uploadProvider.notifier).removeTaggedUser(user),
+                      )).toList(),
+                    ),
+                  ),
                 // Success message
                 if (uploadState.uploadSuccess)
                   Container(

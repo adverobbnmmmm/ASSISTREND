@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class AssistrendOpening extends StatefulWidget {
   @override
@@ -12,55 +13,71 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  
+  bool _serverOnline = false;
+  bool _checkingServer = true;
+  String _serverMessage = '';
+
   @override
   void initState() {
     super.initState();
-    
-    // Setup animation controller
+
     _animationController = AnimationController(
       duration: Duration(milliseconds: 1500),
       vsync: this,
     );
-    
-    // Setup fade animation
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Interval(0.0, 0.5, curve: Curves.easeIn),
       ),
     );
-    
-    // Setup scale animation
     _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Interval(0.0, 0.5, curve: Curves.easeOut),
       ),
     );
-    
-    // Start animation
     _animationController.forward();
-    
-    // Timer to navigate after animation
-    _checkAuthAndNavigate();
+
+    _loopCheckServerAndNavigate();
+  }
+
+  Future<void> _loopCheckServerAndNavigate() async {
+    const String serverUrl = 'http://10.0.2.2:8000/api/account/checkServerStatus';
+    while (mounted && !_serverOnline) {
+      try {
+        final response = await http.get(Uri.parse(serverUrl));
+        if (response.statusCode == 200) {
+          setState(() {
+            _serverOnline = true;
+            _serverMessage = '';
+          });
+          await _checkAuthAndNavigate();
+          return;
+        } else {
+          setState(() {
+            _serverOnline = false;
+            _serverMessage = 'Please wait till server becomes online';
+          });
+        }
+      } catch (e) {
+        setState(() {
+          _serverOnline = false;
+          _serverMessage = 'Please wait till server becomes online';
+        });
+      }
+      await Future.delayed(Duration(seconds: 2));
+    }
   }
   
   Future<void> _checkAuthAndNavigate() async {
-    // Check if we're coming from logout (minimal delay)
-    // Otherwise show normal animation
     await Future.delayed(Duration(milliseconds: 500));
-    
-    // Check if user is logged in
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
     final userId = prefs.getInt('user_id');
     print('DEBUG: Token in opening screen: $token, UserId: $userId');
     final isLoggedIn = token != null && userId != null;
-    
-    // Navigate to the appropriate screen using GoRouter
     if (!mounted) return;
-    
     try {
       if (isLoggedIn) {
         print('User is logged in, navigating to home');
@@ -71,7 +88,6 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
       }
     } catch (e) {
       print('Navigation error in opening screen: $e');
-      // Fallback navigation
       context.go('/login');
     }
   }
@@ -117,6 +133,16 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
                       CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
+                      if (!_serverOnline && _serverMessage.isNotEmpty) ...[
+                        SizedBox(height: 20),
+                        Text(
+                          _serverMessage,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

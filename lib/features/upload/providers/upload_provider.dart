@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +7,7 @@ import 'package:cloudinary_public/cloudinary_public.dart';
 import 'dart:io';
 
 import '../models/upload_model.dart';
+import '../../search/models/user_model.dart';
 import '../services/platform_media_service.dart';
 import '../services/mobile_media_picker.dart';
 import '../services/gallery_service.dart';
@@ -34,7 +34,8 @@ class UploadState {
   final bool showAudioPrompt; // Show prompt to add audio after image selection
   final bool wantsToAddAudio; // User chose to add audio
   final UploadMedia? audioMedia; // Separate audio file
-  
+  final List<UserModel> taggedUsers;
+
   UploadState({
     this.isLoading = false,
     this.isUploading = false,
@@ -54,6 +55,7 @@ class UploadState {
     this.showAudioPrompt = false,
     this.wantsToAddAudio = false,
     this.audioMedia,
+    this.taggedUsers = const [],
   });
 
   UploadState copyWith({
@@ -75,6 +77,7 @@ class UploadState {
     bool? showAudioPrompt,
     bool? wantsToAddAudio,
     UploadMedia? audioMedia,
+    List<UserModel>? taggedUsers,
   }) {
     return UploadState(
       isLoading: isLoading ?? this.isLoading,
@@ -95,6 +98,7 @@ class UploadState {
       showAudioPrompt: showAudioPrompt ?? this.showAudioPrompt,
       wantsToAddAudio: wantsToAddAudio ?? this.wantsToAddAudio,
       audioMedia: audioMedia ?? this.audioMedia,
+      taggedUsers: taggedUsers ?? this.taggedUsers,
     );
   }
 
@@ -108,6 +112,20 @@ class UploadNotifier extends StateNotifier<UploadState> {
   final PlatformMediaService _mediaService;
 
   UploadNotifier(this._mediaService) : super(UploadState());
+
+  // Add a tagged user
+  void addTaggedUser(UserModel user) {
+    if (!state.taggedUsers.contains(user)) {
+      final updated = List<UserModel>.from(state.taggedUsers)..add(user);
+      state = state.copyWith(taggedUsers: updated);
+    }
+  }
+
+  // Remove a tagged user
+  void removeTaggedUser(UserModel user) {
+    final updated = List<UserModel>.from(state.taggedUsers)..remove(user);
+    state = state.copyWith(taggedUsers: updated);
+  }
   
   // Load recent media from gallery
   Future<void> loadRecentMedia() async {
