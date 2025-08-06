@@ -3,7 +3,7 @@ import 'package:assistrend/shared/utils/storage.dart';
 import 'package:http/http.dart' as http;
 
 class SocialApiService {
-  static const String baseUrl = 'http://10.0.2.2:8001/api/'; // Social service on port 8001
+  static const String baseUrl = 'https://social-service-aemo.onrender.com/api/'; // Social service on port 8001
 
   static Future<dynamic> _makeRequest(
     String endpoint,

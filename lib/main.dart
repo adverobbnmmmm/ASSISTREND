@@ -54,14 +54,11 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      // Use the router configuration from the AppRouter class
-      routerConfig: AppRouter.router,
+       routerConfig: AppRouter.router,
       debugShowCheckedModeBanner: false,
     );
   }
 }
-
-// Create a scaffold with bottom navigation that can be used in routes that need it
 class ScaffoldWithBottomNav extends StatelessWidget {
   final Widget child;
 

@@ -423,7 +423,7 @@ class UploadNotifier extends StateNotifier<UploadState> {
         }
       }
       
-      final url = 'http://10.0.2.2:8001';
+      final url = 'https://social-service-aemo.onrender.com';
       
       // Prepare request body
       final Map<String, dynamic> requestBody = {

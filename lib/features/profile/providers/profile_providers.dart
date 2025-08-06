@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../models/profile_model.dart';
 import '../../../shared/utils/storage.dart';
-import '../../../features/auth/providers/auth_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../../core/network/social_api_service.dart'; // Updated import
 
 // State for profile loading
@@ -183,7 +183,7 @@ Widget _buildProfileHeader(ProfileModel profile) {
 
 // Add this method to your profile provider class
 Future<dynamic> _makeRequest(String endpoint, {Map<String, dynamic>? data, String method = 'GET', String? token}) async {
-  final baseUrl = 'http://127.0.0.1:8001/';
+  final baseUrl = 'https://social-service-aemo.onrender.com/';
   final url = Uri.parse('$baseUrl/$endpoint');
   
   final headers = {

@@ -64,8 +64,8 @@ The implementation integrates with the existing Django backend endpoints:
 ### Using the New Post Card Widget
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../widgets/post_card.dart';
-import '../providers/posts_provider.dart';
+import '../../../../lib/features/widgets/post_card.dart';
+import '../../../../lib/features/providers/posts_provider.dart';
 
 class MyPostsPage extends ConsumerWidget {
   @override

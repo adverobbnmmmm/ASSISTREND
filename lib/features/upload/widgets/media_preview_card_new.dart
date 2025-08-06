@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../models/upload_model.dart';
-import './video_preview_player.dart';
+import 'video_preview_player.dart';
 
 /// A widget that previews media (images, videos, audio) on both mobile and desktop
 /// Designed to match Instagram's media preview experience

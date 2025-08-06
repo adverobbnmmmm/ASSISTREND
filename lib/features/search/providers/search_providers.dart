@@ -26,7 +26,7 @@ final searchResultsProvider = FutureProvider.family<List<SearchResultModel>, Str
 
   if (!onlyPosts) {
     // Search users
-    final userRes = await http.get(Uri.parse('http://10.0.2.2:8001/api/social-service/features/search/users/?q=$actualQuery'));
+    final userRes = await http.get(Uri.parse('https://social-service-aemo.onrender.com/api/social-service/features/search/users/?q=$actualQuery'));
     if (userRes.statusCode == 200) {
       final data = json.decode(userRes.body);
       for (var user in data['results']) {
@@ -44,7 +44,7 @@ final searchResultsProvider = FutureProvider.family<List<SearchResultModel>, Str
 
   if (!onlyUsers) {
     // Search posts
-    final postRes = await http.get(Uri.parse('http://10.0.2.2:8001/api/social-service/features/search/posts/?q=$actualQuery'));
+    final postRes = await http.get(Uri.parse('https://social-service-aemo.onrender.com/api/social-service/features/search/posts/?q=$actualQuery'));
     if (postRes.statusCode == 200) {
       final data = json.decode(postRes.body);
       for (var post in data['results']) {

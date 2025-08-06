@@ -19,12 +19,13 @@ class CommentTile extends StatelessWidget {
           // Profile picture placeholder
           CircleAvatar(
             radius: 16,
-            backgroundColor: Colors.grey[300],
+            backgroundColor: Colors.blueAccent,
             child: Text(
               comment.username?.substring(0, 1).toUpperCase() ?? 'U',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
           ),
@@ -43,6 +44,7 @@ class CommentTile extends StatelessWidget {
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -50,7 +52,7 @@ class CommentTile extends StatelessWidget {
                       _formatTimestamp(comment.createdAt),
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.grey[600],
+                        color: Colors.grey[400],
                       ),
                     ),
                   ],
@@ -62,6 +64,7 @@ class CommentTile extends StatelessWidget {
                   comment.comment,
                   style: const TextStyle(
                     fontSize: 14,
+                    color: Colors.white70,
                   ),
                 ),
               ],

@@ -47,7 +47,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.6,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Color(0xff181a1c),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(16),
           topRight: Radius.circular(16),
@@ -61,7 +61,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: Colors.grey[200]!,
+                  color: Colors.grey[700]!,
                   width: 1,
                 ),
               ),
@@ -73,12 +73,13 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
                 const Spacer(),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close, color: Colors.white),
                 ),
               ],
             ),
@@ -103,14 +104,20 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                               onPressed: () => ref
                                   .read(commentsProvider(widget.postId).notifier)
                                   .fetchComments(widget.postId),
-                              child: const Text('Retry'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blueAccent,
+                              ),
+                              child: const Text('Retry', style: TextStyle(color: Colors.white)),
                             ),
                           ],
                         ),
                       )
                     : commentsState.comments.isEmpty
                         ? const Center(
-                            child: Text('No comments yet. Be the first to comment!'),
+                            child: Text(
+                              'No comments yet. Be the first to comment!',
+                              style: TextStyle(color: Colors.white70),
+                            ),
                           )
                         : ListView.builder(
                             itemCount: commentsState.comments.length,
@@ -128,7 +135,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
-                  color: Colors.grey[200]!,
+                  color: Colors.grey[700]!,
                   width: 1,
                 ),
               ),
@@ -140,14 +147,16 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                     controller: _commentController,
                     focusNode: _focusNode,
                     maxLines: null,
+                    style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       hintText: 'Add a comment...',
+                      hintStyle: const TextStyle(color: Colors.white70),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: Colors.grey[100],
+                      fillColor: Colors.grey[800],
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
@@ -160,7 +169,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                   onPressed: _addComment,
                   icon: const Icon(
                     Icons.send,
-                    color: Colors.blue,
+                    color: Colors.blueAccent,
                   ),
                 ),
               ],

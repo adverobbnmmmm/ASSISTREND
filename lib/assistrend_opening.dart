@@ -43,7 +43,7 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
   }
 
   Future<void> _loopCheckServerAndNavigate() async {
-    const String serverUrl = 'http://10.0.2.2:8000/api/account/checkServerStatus';
+    const String serverUrl = 'https://accounts-pk05.onrender.com/api/account/checkServerStatus';
     while (mounted && !_serverOnline) {
       try {
         final response = await http.get(Uri.parse(serverUrl));

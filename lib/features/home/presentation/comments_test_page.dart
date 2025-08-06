@@ -24,8 +24,11 @@ class _CommentsTestPageState extends ConsumerState<CommentsTestPage> {
         : null;
 
     return Scaffold(
+      backgroundColor: const Color(0xff181a1c),
       appBar: AppBar(
-        title: const Text('Comments Test'),
+        backgroundColor: const Color(0xff181a1c),
+        title: const Text('Comments Test', style: TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -35,9 +38,17 @@ class _CommentsTestPageState extends ConsumerState<CommentsTestPage> {
             // Post ID input
             TextField(
               controller: _postIdController,
+              style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 labelText: 'Post ID',
+                labelStyle: TextStyle(color: Colors.white70),
                 border: OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blueAccent),
+                ),
               ),
               keyboardType: TextInputType.number,
             ),
@@ -46,6 +57,10 @@ class _CommentsTestPageState extends ConsumerState<CommentsTestPage> {
             // Load Comments button
             ElevatedButton(
               onPressed: _loadComments,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Load Comments'),
             ),
             const SizedBox(height: 16),
@@ -53,9 +68,17 @@ class _CommentsTestPageState extends ConsumerState<CommentsTestPage> {
             // Comment input
             TextField(
               controller: _commentController,
+              style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 labelText: 'New Comment',
+                labelStyle: TextStyle(color: Colors.white70),
                 border: OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blueAccent),
+                ),
               ),
               maxLines: 3,
             ),
@@ -64,6 +87,10 @@ class _CommentsTestPageState extends ConsumerState<CommentsTestPage> {
             // Add Comment button
             ElevatedButton(
               onPressed: _addComment,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Add Comment'),
             ),
             const SizedBox(height: 16),
@@ -71,6 +98,10 @@ class _CommentsTestPageState extends ConsumerState<CommentsTestPage> {
             // Test Direct API button
             ElevatedButton(
               onPressed: _testDirectAPI,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Test Direct API'),
             ),
             const SizedBox(height: 16),
@@ -82,11 +113,12 @@ class _CommentsTestPageState extends ConsumerState<CommentsTestPage> {
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey),
                 borderRadius: BorderRadius.circular(4),
+                color: Colors.grey[800],
               ),
               child: SingleChildScrollView(
                 child: Text(
                   _output,
-                  style: const TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: 12, color: Colors.white),
                 ),
               ),
             ),
@@ -96,7 +128,12 @@ class _CommentsTestPageState extends ConsumerState<CommentsTestPage> {
             Expanded(
               child: commentsState != null
                   ? _buildCommentsList(commentsState)
-                  : const Center(child: Text('Enter a Post ID and load comments')),
+                  : const Center(
+                      child: Text(
+                        'Enter a Post ID and load comments',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -119,7 +156,12 @@ class _CommentsTestPageState extends ConsumerState<CommentsTestPage> {
     }
     
     if (commentsState.comments.isEmpty) {
-      return const Center(child: Text('No comments found'));
+      return const Center(
+        child: Text(
+          'No comments found',
+          style: TextStyle(color: Colors.white70),
+        ),
+      );
     }
     
     return ListView.builder(
@@ -127,9 +169,16 @@ class _CommentsTestPageState extends ConsumerState<CommentsTestPage> {
       itemBuilder: (context, index) {
         final comment = commentsState.comments[index];
         return Card(
+          color: Colors.grey[800],
           child: ListTile(
-            title: Text(comment.comment),
-            subtitle: Text('By: ${comment.username} at ${comment.createdAt}'),
+            title: Text(
+              comment.comment,
+              style: const TextStyle(color: Colors.white),
+            ),
+            subtitle: Text(
+              'By: ${comment.username} at ${comment.createdAt}',
+              style: const TextStyle(color: Colors.white70),
+            ),
           ),
         );
       },
