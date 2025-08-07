@@ -1,4 +1,6 @@
 import 'package:connect/call_screen.dart';
+import 'package:connect/services/connect_service.dart';
+import 'dart:math';
 import 'package:flutter/material.dart';
 
 class EventFlowScreen extends StatefulWidget {
@@ -10,24 +12,31 @@ class _EventFlowScreenState extends State<EventFlowScreen>
     with TickerProviderStateMixin {
   int currentStep = 0;
   bool isLoading = false;
-  List<String> selectedTags = [];
   List<String> selectedConditions = [];
+  //Edited by sanal
+  List<String> selectedTags = [];
+    List<Map<String, dynamic>> interests = [];
+    List<int> selectedInterestIds = [];
+    List<int> selectedTagIds = []; // store interest IDs (int)
+    List<Map<String, dynamic>> poolTags = []; // each item: { "id": 1, "name": "Music" }
+      bool _hasCalledConnectUsers = false;
+      Map<String, dynamic>? randomUser;
 
   late AnimationController _rotationController;
   late AnimationController _pulseController;
 
   final List<String> steps = ['guidelines', 'conditions', 'pool', 'room'];
-  final List<String> poolTags = [
-    'Accident',
-    'Sports',
-    'College',
-    'Film',
-    'Dropout',
-    'Designing',
-    'Health issue',
-    'Music',
-    'Jobless',
-  ];
+//   final List<String> poolTags = [
+//     'Accident',
+//     'Sports',
+//     'College',
+//     'Film',
+//     'Dropout',
+//     'Designing',
+//     'Health issue',
+//     'Music',
+//     'Jobless',
+//   ];
   final List<String> conditionTags = [
     '#Single',
     '#Anonymous',
@@ -55,46 +64,129 @@ class _EventFlowScreenState extends State<EventFlowScreen>
     _pulseController.dispose();
     super.dispose();
   }
+//Edited by sanal
+void handleNext() async {
+  if (currentStep < 3) {
+    if (currentStep == 1) {
+      try {
+        // 🔹 Send selected tags (pool tags)
 
-  void handleNext() {
-    if (currentStep < 3) {
-      setState(() {
-        currentStep++;
-      });
-    } else {
-      setState(() {
-        isLoading = true;
-      });
 
-      Future.delayed(Duration(seconds: 3), () {
+        // 🔹 Fetch interests from API for Step 3
+        final fetchedInterests = await ConnectService.fetchInterests();
         setState(() {
-          isLoading = false;
+          interests = fetchedInterests;
+          selectedInterestIds = []; // Clear any previously selected
         });
-        // Navigate to call page here
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ready to navigate to call page!')),
-        );
-      });
-    }
-  }
-
-  void toggleTag(String tag, {bool isCondition = false}) {
-    setState(() {
-      if (isCondition) {
-        if (selectedConditions.contains(tag)) {
-          selectedConditions.remove(tag);
-        } else {
-          selectedConditions.add(tag);
-        }
-      } else {
-        if (selectedTags.contains(tag)) {
-          selectedTags.remove(tag);
-        } else {
-          selectedTags.add(tag);
-        }
+        print("✅ Interests fetched: ${fetchedInterests}");
+      } catch (e) {
+        print("❌ Error in Step 2: $e");
       }
+    }
+
+    // Move to next step
+    setState(() {
+      currentStep++;
+    });
+
+    // 🔹 For Step 3: Pick a random user (optional feature)
+    if (currentStep == 3) {
+        print("selected ids $selectedTagIds");
+        try {
+               // 🔹 Send selected interests (only IDs)
+
+        await ConnectService.sendInterests(selectedTagIds);
+        print("✅ Interests sent: $selectedTagIds");
+      } catch (e) {
+        print("❌ Failed to send interests: $e");
+      }
+      final users = await ConnectService.getConnectedUsers();
+      if (users.isNotEmpty) {
+        final randomIndex = Random().nextInt(users.length);
+        setState(() {
+          randomUser = users[randomIndex];
+        });
+      }
+
+    }
+
+
+
+  } else {
+    // Final step reached
+    setState(() {
+      isLoading = true;
+    });
+
+
+    // Delay and navigate
+    Future.delayed(Duration(seconds: 3), () {
+      setState(() {
+        isLoading = false;
+      });
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => CallScreen()),
+      );
     });
   }
+}
+
+
+
+
+void toggleTag(dynamic tagOrId, {bool isCondition = false}) {
+  setState(() {
+    if (isCondition) {
+      // For conditions: string-based tags
+      final String tagStr = tagOrId.toString();
+      if (selectedConditions.contains(tagStr)) {
+        selectedConditions.remove(tagStr);
+      } else {
+        selectedConditions.add(tagStr);
+      }
+    } else {
+      // For interests: id-based tags (int or map)
+      final int tagId = tagOrId is int
+          ? tagOrId
+          : tagOrId is Map
+              ? tagOrId['id']
+              : int.tryParse(tagOrId.toString()) ?? -1;
+
+      if (selectedTagIds.contains(tagId)) {
+        selectedTagIds.remove(tagId);
+      } else {
+        selectedTagIds.add(tagId);
+      }
+    }
+  });
+}
+
+
+// void toggleTag(dynamic tagOrId, {bool isCondition = false}) {
+//   final int tagId = tagOrId is int
+//       ? tagOrId
+//       : tagOrId is Map
+//           ? tagOrId['id']
+//           : int.parse(tagOrId.toString());
+//
+//   setState(() {
+//     if (isCondition) {
+//       // handle conditions if any
+//     } else {
+//       if (selectedTagIds.contains(tagId)) {
+//         selectedTagIds.remove(tagId);
+//       } else {
+//         selectedTagIds.add(tagId);
+//       }
+//     }
+//   });
+// }
+
+
+
+
 
   Widget buildProgressIndicator() {
     return Column(
@@ -427,7 +519,7 @@ class _EventFlowScreenState extends State<EventFlowScreen>
           ],
         ),
         SizedBox(height: 24),
-        ...poolTags.map((tag) => buildTagCheckbox(tag)).toList(),
+        ...interests.map((interest) => buildTagCheckbox(interest)).toList(),
         SizedBox(height: 24),
         OutlinedButton(
           onPressed: () {},
@@ -455,113 +547,148 @@ class _EventFlowScreenState extends State<EventFlowScreen>
     );
   }
 
-  Widget buildTagCheckbox(String tag) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Checkbox(
-            value: selectedTags.contains(tag),
-            onChanged: (value) => toggleTag(tag),
-            activeColor: Colors.blue,
-            side: BorderSide(color: Colors.grey.shade600),
-          ),
-          SizedBox(width: 12),
-          Text(tag, style: TextStyle(color: Colors.grey.shade300)),
-        ],
-      ),
-    );
-  }
+Widget buildTagCheckbox(Map<String, dynamic> tag) {
+  final int tagId = tag['id'];
+  final String tagName = tag['interestName'];
 
-  Widget buildRoomPage() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  return Padding(
+    padding: EdgeInsets.symmetric(vertical: 4),
+    child: Row(
       children: [
-        Text(
-          'Room',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-            color: Colors.blue,
-          ),
+        Checkbox(
+          value: selectedTagIds.contains(tagId),
+          onChanged: (value) => toggleTag(tagId),
+          activeColor: Colors.blue,
+          side: BorderSide(color: Colors.grey.shade600),
         ),
-        SizedBox(height: 48),
-        Container(
-          height: 400,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Colors.orange.shade300, Colors.pink.shade200],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    border: Border.all(color: Colors.white, width: 3),
-                  ),
-                  child: Icon(Icons.person, color: Colors.white, size: 40),
-                ),
-                SizedBox(height: 20),
-                Container(width: 3, height: 60, color: Colors.blue.shade400),
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.blue.shade600,
-                            Colors.purple.shade400,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        border: Border.all(color: Colors.white, width: 3),
-                      ),
-                      child: Icon(
-                        Icons.smart_toy,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
-                    Container(
-                      width: 60,
-                      height: 3,
-                      color: Colors.blue.shade400,
-                      margin: EdgeInsets.symmetric(horizontal: 10),
-                    ),
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Colors.teal.shade300, Colors.green.shade200],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        border: Border.all(color: Colors.white, width: 3),
-                      ),
-                      child: Icon(Icons.person, color: Colors.white, size: 40),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+        SizedBox(width: 12),
+        Text(
+          tagName,
+          style: TextStyle(color: Colors.grey.shade300),
         ),
       ],
-    );
+    ),
+  );
+}
+
+
+String _resolveProfilePicture(String path) {
+
+  if (path.startsWith('http')) {
+    return path;
   }
+  return 'http://domain$path';
+}
+
+
+// Edited by sanal
+Widget buildRoomPage() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Room',
+        style: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: Colors.blue,
+        ),
+      ),
+      SizedBox(height: 48),
+
+      Container(
+        height: 400,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 👤 Current User (You)
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Colors.orange.shade300, Colors.pink.shade200],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(color: Colors.white, width: 3),
+                ),
+                child: Icon(Icons.person, color: Colors.white, size: 40),
+              ),
+
+              SizedBox(height: 20),
+
+              // 🔽 Vertical line
+              Container(width: 3, height: 60, color: Colors.blue.shade400),
+
+              SizedBox(height: 20),
+
+              // 🤖 Chatbot + Horizontal line + Random user
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 🤖 Chatbot (Smart Toy)
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Colors.blue.shade600, Colors.purple.shade400],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(color: Colors.white, width: 3),
+                    ),
+                    child: Icon(Icons.smart_toy, color: Colors.white, size: 32),
+                  ),
+
+                  // ➖ Horizontal line
+                  Container(
+                    width: 60,
+                    height: 3,
+                    color: Colors.blue.shade400,
+                    margin: EdgeInsets.symmetric(horizontal: 10),
+                  ),
+
+                  // 🎯 Random user with profile picture (if available)
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Colors.teal.shade300, Colors.green.shade200],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(color: Colors.white, width: 3),
+                    ),
+                    child: ClipOval(
+                      child: randomUser != null &&
+                              randomUser!['profilepicture'] != null
+                          ? Image.network(
+                              _resolveProfilePicture(randomUser!['profilepicture']),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(Icons.person, color: Colors.white, size: 40),
+                            )
+                          : Icon(Icons.person, color: Colors.white, size: 40),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+
 
 
 
@@ -570,15 +697,25 @@ class _EventFlowScreenState extends State<EventFlowScreen>
     if (isLoading) {
       return buildLoadingScreen();
     }
+// Edited by sanal
 
-    if (currentStep == 3) {
-      Future.delayed(Duration(seconds: 5), () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => CallScreen()),
-        );
-      });
-    }
+//     if (currentStep == 3) {
+//       Future.delayed(Duration(seconds: 5), () {
+//         Navigator.pushReplacement(
+//           context,
+//           MaterialPageRoute(builder: (context) => CallScreen()),
+//         );
+//       });
+//     }
+// ✅ Trigger API + navigation when on step 3
+  if (currentStep == 3 && !_hasCalledConnectUsers) {
+    _hasCalledConnectUsers = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ConnectService.getConnectedUsers(); // just call API
+    });
+  }
+
 
     return Scaffold(
       backgroundColor: Colors.grey.shade900,
