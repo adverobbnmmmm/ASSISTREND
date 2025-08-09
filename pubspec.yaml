@@ -3,7 +3,7 @@ description: A Flutter application for ASSISTREND
 version: 1.0.0+1  # Version number (adjust as needed)
 
 environment:
-  sdk: '>=3.7.0 <4.0.0'
+  sdk: '>=3.8.0 <4.0.0'
   flutter: '>=3.22.0'  # Add Flutter constraint if needed
 
 dependencies:
@@ -37,6 +37,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  build_runner: ^2.4.7
+  riverpod_generator: ^2.3.9
+  custom_lint: ^0.5.7
+  riverpod_lint: ^2.3.7
 
 dependency_overrides:
   async: ^2.13.0
