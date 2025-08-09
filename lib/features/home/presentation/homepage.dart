@@ -171,19 +171,14 @@ class _HomePageState extends ConsumerState<HomePage> {
     
     return ListView.builder(
       itemBuilder: (context, index) {
-        if (index == 0) {
-          return const CarouselSlidebar();
+        if (index < postsState.posts.length) {
+          return AppPosts(post: postsState.posts[index]);
         } else {
-          final postIndex = index - 1;
-          if (postIndex < postsState.posts.length) {
-            return AppPosts(post: postsState.posts[postIndex]);
-          } else {
-            // Fallback for extra items or loading indicator
-            return const SizedBox.shrink();
-          }
+          // Fallback for extra items or loading indicator
+          return const SizedBox.shrink();
         }
       },
-      itemCount: postsState.posts.length + 1, // +1 for carousel
+      itemCount: postsState.posts.length,
     );
   }
 }

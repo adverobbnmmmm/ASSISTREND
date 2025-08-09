@@ -74,31 +74,72 @@ class _SearchPageState extends ConsumerState<SearchPage> with SingleTickerProvid
 
   Widget _buildSearchField() {
     return Container(
-      height: 40,
+      height: 52,
       margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: Colors.grey[850],
-        borderRadius: BorderRadius.circular(25),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF1A1A1A),
+            Color(0xFF232526),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.08),
+            blurRadius: 8,
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: TextField(
         controller: _searchController,
         onChanged: _onSearch,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
         decoration: InputDecoration(
-          hintText: 'Search for people, posts, tags...',
-          hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
-          prefixIcon: Icon(Icons.search, color: Colors.grey[500], size: 20),
+          hintText: 'Search people, posts, hashtags...',
+          hintStyle: TextStyle(
+            color: Colors.grey[500],
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+          ),
+          prefixIcon: Container(
+            padding: const EdgeInsets.all(14),
+            child: Icon(
+              Icons.search_rounded,
+              color: Colors.blue,
+              size: 24,
+            ),
+          ),
           suffixIcon: _searchController.text.isNotEmpty 
-              ? IconButton(
-                  icon: Icon(Icons.close, color: Colors.grey[500], size: 18),
-                  onPressed: () {
-                    _searchController.clear();
-                    _onSearch('');
-                  },
+              ? Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: IconButton(
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                    onPressed: () {
+                      _searchController.clear();
+                      _onSearch('');
+                    },
+                  ),
                 ) 
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 5),
+          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         ),
       ),
     );

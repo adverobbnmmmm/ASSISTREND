@@ -54,6 +54,7 @@ flutter:
    - assets/comment.png
    - assets/threewaysymbol.png
    - assets/robot.png
+   - assets/networking_illustration.png
 # flutter:
 #   assets:
 #     - assets/fonts/NotoSans-Regular.ttf

@@ -1,84 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:assistrend/features/auth/providers/auth_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'homepage.dart';
-import 'messenger.dart';
-import 'package:go_router/go_router.dart';
-class AppBarwidget extends StatelessWidget {
-  const AppBarwidget({
-    super.key,
-  });
+class AppBarwidget extends ConsumerStatefulWidget {
+  final Widget? logoutButton;
+  const AppBarwidget({Key? key, this.logoutButton}) : super(key: key);
+
+  @override
+  ConsumerState<AppBarwidget> createState() => _AppBarwidgetState();
+}
+
+class _AppBarwidgetState extends ConsumerState<AppBarwidget> {
+  String? userName;
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _getUserNameFromPrefs();
+  }
+
+  Future<void> _getUserNameFromPrefs() async {
+    setState(() { isLoading = true; });
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name') ?? '';
+    setState(() {
+      userName = name.isNotEmpty ? name : 'User';
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: const Color(0xff181a1c),
-      width: double.infinity,
-      height: 80,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          children: [
-            Container(
-              width: 50,             
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.blue,
-              ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: const Text(
-                'Good Morning, User',
-                style: TextStyle(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          isLoading
+              ? const CircularProgressIndicator()
+              : Text(
+                  'Welcome ${userName ?? 'Jen'}',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
-                    fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              width: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xff1f339b), width: 1),
-              ),
-              child: IconButton(
-                  onPressed: () {
-                    context.push('/profile');
-                  },
-                  icon: const Image(
-                    image: AssetImage('assets/dashboard.png'),
-                    color: Colors.white,
-                  )),
-            ),
-            const SizedBox(width: 8),
-            ValueListenableBuilder(
-                valueListenable: showContainer,
-                builder: (context, value, _) {
-                  return Container(
-                      width: 40,
-                      decoration: const BoxDecoration(
-                          shape: BoxShape.circle, color: Color(0xff2e4ef6)),
-                      child: IconButton(
-                        onPressed: () {
-                          toggleContainer();
-                          Messenger(isSidebaropened: showContainer.value);
-                        },
-                        icon: !showContainer.value
-                            ? const Image(
-                                image: AssetImage('assets/mailbox.png'),
-                                color: Colors.white,
-                              )
-                            : const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                              ),
-                      ));
-                }),
-          ],
-        ),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+          if (widget.logoutButton != null) widget.logoutButton!,
+        ],
       ),
     );
   }

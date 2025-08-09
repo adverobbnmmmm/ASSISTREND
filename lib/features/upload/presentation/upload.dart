@@ -10,13 +10,18 @@ import '../../search/models/user_model.dart';
 
 // Show dialog to tag people
 void _showTagPeopleDialog(BuildContext context) {
+  TextEditingController _searchController = TextEditingController();
   showDialog(
     context: context,
     builder: (context) {
       return Consumer(builder: (context, ref, _) {
         final query = ref.watch(searchQueryProvider);
         final resultsAsync = ref.watch(searchResultsProvider('profile:' + query));
-        TextEditingController _searchController = TextEditingController(text: query);
+        // Keep controller in sync with provider, but don't recreate it
+        if (_searchController.text != query) {
+          _searchController.text = query;
+          _searchController.selection = TextSelection.fromPosition(TextPosition(offset: _searchController.text.length));
+        }
         return AlertDialog(
           title: const Text('Tag People'),
           content: SizedBox(
