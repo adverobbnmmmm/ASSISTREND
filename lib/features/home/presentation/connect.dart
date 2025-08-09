@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'chat_page.dart';
 import 'phone_page.dart';
 
@@ -101,66 +102,71 @@ class _ConnectButtonState extends State<ConnectButton>
             child: Stack(
               alignment: Alignment.bottomRight,
               children: <Widget>[
-                IgnorePointer(
-                  child: Container(
-                    color: Colors.transparent,
-                    height: 150.0,
-                    width: 150.0,
-                  ),
-                  Transform.translate(
-                    offset: Offset.fromDirection(getRadiansFromDegree(270),
-                        degOneTranslationAnimation.value * 100),
-                    child: Transform(
-                      transform: Matrix4.rotationZ(
-                          getRadiansFromDegree(rotationAnimation.value))
-                        ..scale(degOneTranslationAnimation.value),
-                      alignment: Alignment.center,
-                      child: CircularButton(
-                        color: Colors.white,
-                        width: 70,
-                        height: 70,
-                        text: 'Chat',
-                        onClick: () {
-                          _showStaticPage(context, 'Chat');
-                        },
-                      ),
+                  IgnorePointer(
+                    ignoring: true, // Set to true or false as needed
+                    child: Stack(
+                      children: [
+                        Container(
+                          color: Colors.transparent,
+                          height: 150.0,
+                          width: 150.0,
+                        ),
+                        Transform.translate(
+                          offset: Offset.fromDirection(getRadiansFromDegree(270),
+                              degOneTranslationAnimation.value * 100),
+                          child: Transform(
+                            transform: Matrix4.rotationZ(
+                                getRadiansFromDegree(rotationAnimation.value))
+                              ..scale(degOneTranslationAnimation.value),
+                            alignment: Alignment.center,
+                            child: CircularButton(
+                              color: Colors.white,
+                              width: 70,
+                              height: 70,
+                              text: 'Chat',
+                              onClick: () {
+                                _showStaticPage(context, 'Chat');
+                              },
+                            ),
+                          ),
+                        ),
+                        Transform.translate(
+                          offset: Offset.fromDirection(getRadiansFromDegree(180),
+                              degThreeTranslationAnimation.value * 100),
+                          child: Transform(
+                            transform: Matrix4.rotationZ(
+                                getRadiansFromDegree(rotationAnimation.value))
+                              ..scale(degThreeTranslationAnimation.value),
+                            alignment: Alignment.center,
+                            child: CircularButton(
+                              color: Colors.white,
+                              width: 70,
+                              height: 70,
+                              text: 'Phone',
+                              onClick: () {
+                                _showStaticPage(context, 'Phone');
+                              },
+                            ),
+                          ),
+                        ),
+                        Transform(
+                          transform: Matrix4.rotationZ(
+                            getRadiansFromDegree(rotationAnimation.value),
+                          )..scale(degOneTranslationAnimation.value),
+                          alignment: Alignment.center,
+                          child: CircularButton(
+                            color: Colors.white,
+                            width: 70,
+                            height: 70,
+                            text: 'Chat',
+                            onClick: () {
+                              context.go('/chat');
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Transform.translate(
-                    offset: Offset.fromDirection(getRadiansFromDegree(180),
-                        degThreeTranslationAnimation.value * 100),
-                    child: Transform(
-                      transform: Matrix4.rotationZ(
-                          getRadiansFromDegree(rotationAnimation.value))
-                        ..scale(degThreeTranslationAnimation.value),
-                      alignment: Alignment.center,
-                      child: CircularButton(
-                        color: Colors.white,
-                        width: 70,
-                        height: 70,
-                        text: 'Phone',
-                        onClick: () {
-                          _showStaticPage(context, 'Phone');
-                        },
-                      ),
-                    ),
-                  ),
-                  Transform(
-                    transform: Matrix4.rotationZ(
-                      getRadiansFromDegree(rotationAnimation.value),
-                    )..scale(degOneTranslationAnimation.value),
-                    alignment: Alignment.center,
-                    child: CircularButton(
-                      color: Colors.white,
-                      width: 70,
-                      height: 70,
-                      text: 'Chat',
-                      onClick: () {
-                        context.go('/chat');
-                      },
-                    ),
-                  ),
-                ),
                 Transform.translate(
                   offset: Offset.fromDirection(
                     getRadiansFromDegree(180),

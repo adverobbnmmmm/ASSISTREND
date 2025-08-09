@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:assistrend/features/auth/providers/auth_provider.dart';
+import 'package:assistrend/features/chat/presentation/chat_home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppBarwidget extends ConsumerStatefulWidget {
@@ -51,7 +52,17 @@ class _AppBarwidgetState extends ConsumerState<AppBarwidget> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-          if (widget.logoutButton != null) widget.logoutButton!,
+            if (widget.logoutButton != null) widget.logoutButton!,
+          IconButton(
+            icon: const Icon(Icons.message, color: Colors.white),
+            onPressed: () {
+              // Navigator.of(context).push(
+              //   MaterialPageRoute(
+              //     builder: (context) => const ChatHomePage(),
+              //   ),
+              // );
+            },
+          ),
         ],
       ),
     );
