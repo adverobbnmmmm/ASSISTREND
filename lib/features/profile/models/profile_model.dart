@@ -12,7 +12,9 @@ class ProfileModel {
   final List<int> likedPosts;
   final List<int> taggedPosts;
   final List<SocialLink> socials;
-  final List<String> interests; // Add this field
+  final List<String> interests;
+  final String? audioUrl; // Add profile audio URL
+  final String? profileImageUrl; // Add profile image URL
 
   ProfileModel({
     required this.name,
@@ -26,7 +28,9 @@ class ProfileModel {
     required this.likedPosts,
     required this.taggedPosts,
     required this.socials,
-    required this.interests, // Add this parameter
+    required this.interests,
+    this.audioUrl, // Add this parameter
+    this.profileImageUrl, // Add this parameter
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -64,6 +68,8 @@ class ProfileModel {
               ?.map((interest) => interest['interestId__interestName'] as String)
               .toList() ??
           [],
+      audioUrl: json['audioUrl'], // Add audio URL parsing
+      profileImageUrl: json['profileImageUrl'], // Add profile image URL parsing
     );
   }
 
@@ -81,7 +87,9 @@ class ProfileModel {
       likedPosts: [],
       taggedPosts: [],
       socials: [],
-      interests: [], // Add this
+      interests: [],
+      audioUrl: null, // Add this
+      profileImageUrl: null, // Add this
     );
   }
 }

@@ -183,7 +183,7 @@ Widget _buildProfileHeader(ProfileModel profile) {
 
 // Add this method to your profile provider class
 Future<dynamic> _makeRequest(String endpoint, {Map<String, dynamic>? data, String method = 'GET', String? token}) async {
-  final baseUrl = 'https://social-service-aemo.onrender.com/';
+  final baseUrl = 'http://10.0.2.2:8001';
   final url = Uri.parse('$baseUrl/$endpoint');
   
   final headers = {

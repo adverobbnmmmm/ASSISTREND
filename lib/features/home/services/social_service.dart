@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/comment_model.dart';
 
 class SocialService {
-  static const String baseUrl = 'https://social-service-aemo.onrender.com/api/social-service/features/';
+  static const String baseUrl = 'http://10.0.2.2:8001/api/social-service/features/';
 
   // Like a post
   static Future<bool> likePost(int postId, int userId) async {

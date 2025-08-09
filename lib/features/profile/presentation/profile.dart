@@ -7,6 +7,9 @@ import '../providers/profile_providers.dart';
 import '../models/profile_model.dart';
 import 'package:assistrend/features/auth/providers/auth_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../home/models/post_model.dart' as HomePost;
+import '../../home/presentation/postbottombar.dart';
+import '../../home/services/audio_player_service.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -16,11 +19,13 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
-  final List<String> tabs = ["Posts", "Stories", "Liked", "Tagged"];
+  final List<String> tabs = ["Posts", "Liked", "Tagged"];
 
   @override
   void initState() {
     super.initState();
+    // Initialize audio player service
+    AudioPlayerService.initialize();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadUserProfile();
     });
@@ -149,9 +154,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
                 child: CircleAvatar(
                   radius: 38,
-                  backgroundImage: NetworkImage(
-                    "https://ui-avatars.com/api/?name=${profile.name}&background=random"
-                  ),
+                  backgroundImage: profile.profileImageUrl != null && profile.profileImageUrl!.isNotEmpty
+                      ? NetworkImage(profile.profileImageUrl!)
+                      : NetworkImage(
+                          "https://ui-avatars.com/api/?name=${profile.name}&background=random"
+                        ),
+                  child: profile.profileImageUrl != null && profile.profileImageUrl!.isNotEmpty
+                      ? null
+                      : Text(
+                          profile.emoji.isNotEmpty ? profile.emoji : profile.name.isNotEmpty 
+                              ? profile.name[0].toUpperCase() : '?',
+                          style: TextStyle(fontSize: 24, color: Colors.white),
+                        ),
                 ),
               ),  
               Positioned(
@@ -264,14 +278,33 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade800.withOpacity(0.5),
+                      color: profile.audioUrl != null 
+                          ? Colors.blueAccent.withOpacity(0.5)
+                          : Colors.grey.shade800.withOpacity(0.3),
                       shape: BoxShape.circle,
                     ),
-                    child: IconButton(
-                      onPressed: () {},
-                      icon: Icon(Icons.play_arrow, color: Colors.white),
-                      iconSize: 16,
-                      padding: EdgeInsets.zero,
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: AudioPlayerService.isPlayingNotifier,
+                      builder: (context, isPlaying, child) {
+                        final isCurrentlyPlaying = profile.audioUrl != null && 
+                            AudioPlayerService.isUrlPlaying(profile.audioUrl!);
+                        
+                        return IconButton(
+                          onPressed: profile.audioUrl != null ? () async {
+                            if (isCurrentlyPlaying) {
+                              await AudioPlayerService.pause();
+                            } else {
+                              await AudioPlayerService.playFromUrl(profile.audioUrl!);
+                            }
+                          } : null,
+                          icon: Icon(
+                            isCurrentlyPlaying ? Icons.pause : Icons.play_arrow, 
+                            color: profile.audioUrl != null ? Colors.white : Colors.grey
+                          ),
+                          iconSize: 16,
+                          padding: EdgeInsets.zero,
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -483,14 +516,30 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       case 0:
         return _buildPostContent(profile);
       case 1:
-        return _buildStoriesContent(profile);
-      case 2:
         return _buildLikedContent(profile);
-      case 3:
+      case 2:
         return _buildTaggedContent(profile);
       default:
         return _buildPostContent(profile);
     }
+  }
+
+  // Convert profile post to home post model for consistent UI
+  HomePost.Post _convertToHomePost(Post profilePost, ProfileModel profile) {
+    return HomePost.Post(
+      id: profilePost.id,
+      user: 0, // Will be filled with actual user ID if available
+      username: profile.username,
+      caption: profilePost.caption,
+      imageUrl: profilePost.imageUrl,
+      audioUrl: null, // Profile posts don't have audio in current model
+      category: 2, // Default to "Experience" category
+      createdAt: DateTime.parse(profilePost.createdAt),
+      // Generate realistic but varied counts based on post ID for demo
+      likesCount: (profilePost.id * 7 + 50) % 500 + 10, // Generates varied counts between 10-510
+      isLiked: profilePost.id % 3 == 0, // Every 3rd post is liked for demo
+      commentsCount: (profilePost.id * 3 + 5) % 50 + 2, // Generates varied counts between 2-52
+    );
   }
 
   Widget _buildPostContent(ProfileModel profile) {
@@ -512,11 +561,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       );
     }
 
+    // Sort posts by creation date (latest first) and get the latest one
+    final sortedPosts = List<Post>.from(profile.posts);
+    sortedPosts.sort((a, b) => DateTime.parse(b.createdAt).compareTo(DateTime.parse(a.createdAt)));
+    final latestPost = sortedPosts.first;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(
         children: [
-          ...profile.posts.take(1).map((post) => _buildSinglePost(post)),          if (profile.posts.length > 1) ...[
+          _buildSinglePost(latestPost, profile),
+          if (profile.posts.length > 1) ...[
             SizedBox(height: 16),
             Center(
               child: ElevatedButton(
@@ -538,7 +593,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   );
                 },
                 child: const Text(
-                  "See more post",
+                  "See more posts",
                   style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
                 ),
               ),
@@ -548,10 +603,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       ),
     );
   }
-  Widget _buildSinglePost(Post post) {
+  Widget _buildSinglePost(Post post, ProfileModel profile) {
+    // Convert to home post for consistent UI with likes/comments
+    final homePost = _convertToHomePost(post, profile);
+    
     DateTime postDate = DateTime.parse(post.createdAt);
     String timeAgo = _getTimeAgo(postDate);
-    String username = "Anu"; // Using the name from the image
+    String username = profile.name;
 
     return Container(
       decoration: BoxDecoration(
@@ -567,11 +625,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 18,
-                backgroundImage: NetworkImage(
-                  "https://ui-avatars.com/api/?name=Anu&background=random"
-                ),
+                backgroundImage: profile.profileImageUrl != null && profile.profileImageUrl!.isNotEmpty
+                    ? NetworkImage(profile.profileImageUrl!)
+                    : NetworkImage(
+                        "https://ui-avatars.com/api/?name=${profile.name}&background=random"
+                      ),
+                child: profile.profileImageUrl != null && profile.profileImageUrl!.isNotEmpty
+                    ? null
+                    : Text(
+                        profile.emoji.isNotEmpty ? profile.emoji : profile.name.isNotEmpty 
+                            ? profile.name[0].toUpperCase() : '?',
+                        style: TextStyle(fontSize: 12, color: Colors.white),
+                      ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -684,44 +751,29 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           ],
           
-          // Post actions
+          // Post actions using home page style
           const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildPostAction(Icons.thumb_up_outlined, "261"),
-              const SizedBox(width: 20),
-              _buildPostAction(Icons.chat_bubble_outline, "12"),
-              const SizedBox(width: 20),
-              _buildPostAction(Icons.share_outlined, ""),
-              const Spacer(),
-              IconButton(
-                onPressed: () {},
-                icon: Icon(Icons.bookmark_border, color: Colors.white),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                iconSize: 20,
-              ),
-            ],
-          ),
+          // Debug: Show the actual counts being passed
+          // Container(
+          //   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          //   margin: EdgeInsets.only(bottom: 8),
+          //   decoration: BoxDecoration(
+          //     color: Colors.blue.withOpacity(0.1),
+          //     borderRadius: BorderRadius.circular(8),
+          //   ),
+          //   child: Text(
+          //     'Likes: ${homePost.likesCount} | Comments: ${homePost.commentsCount} | Liked: ${homePost.isLiked}',
+          //     style: TextStyle(
+          //       color: Colors.blue,
+          //       fontSize: 10,
+          //     ),
+          //   ),
+          // ),
+          PostBottomBar(post: homePost),
         ],
       ),
     );
   }
-  Widget _buildPostAction(IconData icon, String count) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.white, size: 18),
-        if (count.isNotEmpty) ...[
-          SizedBox(width: 4),
-          Text(
-            count,
-            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-        ],
-      ],
-    );
-  }
-
   String _getTimeAgo(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
@@ -739,67 +791,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     } else {
       return 'now';
     }
-  }
-
-  Widget _buildStoriesContent(ProfileModel profile) {
-    if (profile.stories.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              Icon(Icons.auto_stories, color: Colors.grey.shade600, size: 48),
-              SizedBox(height: 16),
-              Text(
-                "No stories yet",
-                style: TextStyle(color: Colors.grey.shade400, fontSize: 16),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.symmetric(horizontal: 24),
-      itemCount: profile.stories.length,
-      itemBuilder: (context, index) {
-        final story = profile.stories[index];
-        return Container(
-          margin: EdgeInsets.only(bottom: 12),
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Color(0xFF1A1A1A),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.auto_stories, color: Colors.blue, size: 20),
-            ),
-            title: Text(
-              story.content,
-              style: TextStyle(color: Colors.white, fontSize: 15),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              _getTimeAgo(DateTime.parse(story.createdAt)),
-              style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-            ),
-            onTap: () {},
-          ),
-        );
-      },
-    );
   }
 
   Widget _buildLikedContent(ProfileModel profile) {

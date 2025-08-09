@@ -4,6 +4,8 @@ import 'package:assistrend/features/profile/models/profile_model.dart';
 import 'package:assistrend/features/profile/providers/profile_providers.dart';
 import 'package:assistrend/features/auth/providers/auth_provider.dart';
 import 'package:assistrend/core/network/social_api_service.dart';
+import '../widgets/profile_audio_widget.dart';
+import '../widgets/profile_photo_widget.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   final ProfileModel profile;
@@ -232,6 +234,80 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     });
   }
 
+  Future<void> _updateProfileAudio(String? audioUrl) async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+      successMessage = null;
+    });
+
+    try {
+      final authState = ref.read(authProvider);
+      final userId = authState.userId;
+      
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await SocialApiService.updateProfileAudio(userId, audioUrl);
+      
+      setState(() {
+        successMessage = audioUrl != null 
+            ? 'Profile audio updated successfully' 
+            : 'Profile audio removed successfully';
+      });
+      
+      // Refresh profile data
+      await ref.read(profileProvider.notifier).fetchProfile(userId);
+      
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to update profile audio: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateProfilePhoto(String? photoUrl) async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+      successMessage = null;
+    });
+
+    try {
+      final authState = ref.read(authProvider);
+      final userId = authState.userId;
+      
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await SocialApiService.updateProfilePhoto(userId, photoUrl);
+      
+      setState(() {
+        successMessage = photoUrl != null 
+            ? 'Profile photo updated successfully' 
+            : 'Profile photo removed successfully';
+      });
+      
+      // Refresh profile data
+      await ref.read(profileProvider.notifier).fetchProfile(userId);
+      
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to update profile photo: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   // Update this reusable function for creating more rectangular gradient border buttons
   Widget _buildGradientBorderButton(String text, VoidCallback onPressed) {
     return Container(
@@ -337,6 +413,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   _buildNameSection(),
                   const SizedBox(height: 24),
                   _buildAboutSection(),
+                  const SizedBox(height: 24),
+                  _buildAudioSection(),
+                  const SizedBox(height: 24),
+                  _buildPhotoSection(),
                   const SizedBox(height: 24),
                   _buildEmojiSection(),
                   const SizedBox(height: 24),
@@ -467,6 +547,34 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         const SizedBox(height: 16),
         Center(
           child: _buildGradientBorderButton('Update About', _updateAbout),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAudioSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Profile Audio'),
+        const SizedBox(height: 12),
+        ProfileAudioWidget(
+          currentAudioUrl: widget.profile.audioUrl,
+          onAudioUpdated: _updateProfileAudio,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhotoSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Profile Photo'),
+        const SizedBox(height: 12),
+        ProfilePhotoWidget(
+          currentProfileImageUrl: widget.profile.profileImageUrl,
+          onPhotoUploaded: _updateProfilePhoto,
         ),
       ],
     );

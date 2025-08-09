@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/profile_providers.dart';
 import '../models/profile_model.dart';
+import '../../home/models/post_model.dart' as HomePost;
+import '../../home/presentation/postheadbar.dart';
+import '../../home/presentation/postbottombar.dart';
+import '../../home/widgets/network_video_player.dart';
 
 class SeeMorePostsPage extends ConsumerStatefulWidget {
   const SeeMorePostsPage({super.key});
@@ -10,58 +14,23 @@ class SeeMorePostsPage extends ConsumerStatefulWidget {
   _SeeMorePostsPageState createState() => _SeeMorePostsPageState();
 }
 
-class _SeeMorePostsPageState extends ConsumerState<SeeMorePostsPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _likeAnimationController;
-  late Animation<Color?> _likeColorAnimation;
+class _SeeMorePostsPageState extends ConsumerState<SeeMorePostsPage> {
 
   @override
   void initState() {
     super.initState();
-    _likeAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-
-    _likeColorAnimation = ColorTween(
-      begin: Colors.grey[400],
-      end: Colors.blue,
-    ).animate(CurvedAnimation(
-      parent: _likeAnimationController,
-      curve: Curves.easeInOut,
-    ));
   }
 
   @override
   void dispose() {
-    _likeAnimationController.dispose();
     super.dispose();
-  }
-
-  String _getTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inDays > 365) {
-      return '${(difference.inDays / 365).floor()} years ago';
-    } else if (difference.inDays > 30) {
-      return '${(difference.inDays / 30).floor()} months ago';
-    } else if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'just now';
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileProvider);
     final selectedTabIndex = ref.watch(selectedTabIndexProvider);
-    final List<String> tabs = ["Posts", "Stories", "Liked", "Tagged"];
+    final List<String> tabs = ["Posts", "Liked", "Tagged"];
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -138,10 +107,8 @@ class _SeeMorePostsPageState extends ConsumerState<SeeMorePostsPage>
       case 0:
         return _buildPostContent(profile);
       case 1:
-        return _buildStoriesContent(profile);
-      case 2:
         return _buildLikedContent(profile);
-      case 3:
+      case 2:
         return _buildTaggedContent(profile);
       default:
         return _buildPostContent(profile);
@@ -155,201 +122,202 @@ class _SeeMorePostsPageState extends ConsumerState<SeeMorePostsPage>
               style: TextStyle(color: Colors.white)));
     }
 
+    // Sort posts by creation date (latest first)
+    final sortedPosts = List<Post>.from(profile.posts);
+    sortedPosts.sort((a, b) => DateTime.parse(b.createdAt).compareTo(DateTime.parse(a.createdAt)));
+
     return ListView.builder(
-      itemCount: profile.posts.length,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      itemCount: sortedPosts.length,
+      padding: const EdgeInsets.symmetric(horizontal: 0),
       itemBuilder: (context, index) {
-        final post = profile.posts[index];
-        return Column(
-          children: [
-            _buildSinglePost(post),
-            SizedBox(height: 16),
-          ],
-        );
+        final post = sortedPosts[index];
+        return _buildHomeStylePost(post, profile);
       },
     );
   }
 
-  Widget _buildSinglePost(Post post) {
-    bool _isLiked = false;
-    final profileData = ref.read(profileProvider).profile;
+  // Convert profile post to home post model for consistent UI
+  HomePost.Post _convertToHomePost(Post profilePost, ProfileModel profile) {
+    return HomePost.Post(
+      id: profilePost.id,
+      user: 0, // Will be filled with actual user ID if available
+      username: profile.username,
+      caption: profilePost.caption,
+      imageUrl: profilePost.imageUrl,
+      audioUrl: null, // Profile posts don't have audio in current model
+      category: 1, // Default category, you can modify this
+      createdAt: DateTime.parse(profilePost.createdAt),
+      likesCount: 0, // Default for now
+      isLiked: false, // Default for now
+      commentsCount: 0, // Default for now
+    );
+  }
 
+  // Helper method to determine if URL is a video
+  bool _isVideoUrl(String url) {
+    final videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v'];
+    final lowerUrl = url.toLowerCase();
+    
+    // Check for file extensions
+    if (videoExtensions.any((ext) => lowerUrl.contains(ext))) {
+      return true;
+    }
+    
+    // Check for cloudinary video transformations
+    if (lowerUrl.contains('cloudinary') && (
+        lowerUrl.contains('/video/') || 
+        lowerUrl.contains('f_auto,q_auto') ||
+        lowerUrl.contains('resource_type/video')
+    )) {
+      return true;
+    }
+    
+    // Check for video in URL path or query parameters
+    if (lowerUrl.contains('video') || lowerUrl.contains('v_')) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  // Helper method to get category name from category ID
+  String? _getCategoryName(int? categoryId) {
+    if (categoryId == null) return null;
+    
+    // Map category IDs to names - this should match your backend categories
+    switch (categoryId) {
+      case 1:
+        return 'Opinion';
+      case 2:
+        return 'Experience';
+      case 3:
+        return 'Adventure';
+      default:
+        return 'General';
+    }
+  }
+
+  Widget _buildHomeStylePost(Post profilePost, ProfileModel profile) {
+    final homePost = _convertToHomePost(profilePost, profile);
+    final mediaUrl = homePost.imageUrl;
+    final caption = homePost.caption;
+    final isVideo = _isVideoUrl(mediaUrl);
+    
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
+      width: double.infinity,
+      constraints: const BoxConstraints(
+        minHeight: 0,
+        maxHeight: double.infinity,
       ),
-      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border(
+            top: BorderSide(color: Colors.blueGrey[700] ?? Colors.blueGrey),
+            bottom: BorderSide(color: Colors.blueGrey[700] ?? Colors.blueGrey),
+            left: BorderSide.none,
+            right: BorderSide.none),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Post Header
-          Row(
-            children: [
-              const CircleAvatar(
-                radius: 20,
-                backgroundImage: AssetImage("assets/profile_pic.jpg"),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    post.caption.split(' ').take(2).join(' '), // First two words as title
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    _getTimeAgo(DateTime.parse(post.createdAt)),
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              const Icon(Icons.more_vert, color: Colors.white),
-            ],
+          PostHeadBar(
+            username: homePost.username ?? 'Anonymous',
+            category: _getCategoryName(homePost.category),
+            createdAt: homePost.createdAt,
           ),
-          const SizedBox(height: 12),
-
-          // Post Content
-          Text(
-            post.caption,
-            style: TextStyle(color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          
-          // User Interests
-          if (profileData.interests.isNotEmpty) ...[
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: profileData.interests.map((interest) => 
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(interest, 
-                    style: TextStyle(color: Colors.blue[300], fontSize: 12),
-                  ),
-                )
-              ).toList(),
+          if (mediaUrl.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+              child: isVideo 
+                  ? _buildVideoPlayer(mediaUrl)
+                  : _buildImageDisplay(mediaUrl),
             ),
-            const SizedBox(height: 12),
-          ],
-
-          // Post Image
-          if (post.imageUrl.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                post.imageUrl,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    width: double.infinity,
-                    color: Colors.grey[800],
-                    child: Icon(Icons.broken_image, color: Colors.grey),
-                  );
-                },
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+            child: Text(
+              caption,
+              style: const TextStyle(fontSize: 16, color: Colors.white),
             ),
-          const SizedBox(height: 12),
-
-          // Post Actions
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isLiked = !_isLiked;
-                  });
-                  if (_isLiked) {
-                    _likeAnimationController.forward();
-                  } else {
-                    _likeAnimationController.reverse();
-                  }
-                },
-                child: AnimatedBuilder(
-                  animation: _likeColorAnimation,
-                  builder: (context, child) {
-                    return Icon(
-                      Icons.thumb_up_alt_outlined,
-                      color: _isLiked ? Colors.blue : Colors.grey[400],
-                      size: 28,
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Text("0", style: TextStyle(color: Colors.grey)),
-              const Spacer(),
-              const Icon(Icons.comment_outlined, color: Colors.grey),
-            ],
           ),
+          // Show user interests
+          // if (profile.interests.isNotEmpty) ...[
+          //   Padding(
+          //     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+          //     child: Align(
+          //       alignment: Alignment.centerLeft,
+          //       child: Wrap(
+          //         spacing: 6,
+          //         runSpacing: 6,
+          //         children: profile.interests.map((interest) => 
+          //           Container(
+          //             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          //             decoration: BoxDecoration(
+          //               color: Colors.blue.withOpacity(0.2),
+          //               borderRadius: BorderRadius.circular(12),
+          //             ),
+          //             child: Text(interest, 
+          //               style: TextStyle(color: Colors.blue[300], fontSize: 12),
+          //             ),
+          //           )
+          //         ).toList(),
+          //       ),
+          //     ),
+          //   ),
+          // ],
+          PostBottomBar(post: homePost),
         ],
       ),
     );
   }
-
-  Widget _buildStoriesContent(ProfileModel profile) {
-    if (profile.stories.isEmpty) {
-      return Center(
-          child: Text('No stories available',
-              style: TextStyle(color: Colors.white)));
-    }
-
-    return ListView.builder(
-      itemCount: profile.stories.length,
-      padding: const EdgeInsets.all(16.0),
-      itemBuilder: (context, index) {
-        final story = profile.stories[index];
-        return Card(
-          color: Colors.grey[900],
-          margin: EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.blue.withOpacity(0.2),
-                      child: Icon(Icons.auto_stories, color: Colors.blue),
-                    ),
-                    SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Story ${story.id}",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          _getTimeAgo(DateTime.parse(story.createdAt)),
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12),
-                Text(
-                  story.content,
-                  style: TextStyle(color: Colors.white),
-                ),
-              ],
+  
+  Widget _buildImageDisplay(String imageUrl) {
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          height: 200,
+          color: Colors.grey[800],
+          child: const Center(
+            child: Icon(
+              Icons.error,
+              color: Colors.white,
+              size: 50,
             ),
           ),
         );
       },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          height: 200,
+          child: Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildVideoPlayer(String videoUrl) {
+    return SizedBox(
+      height: 300,
+      child: NetworkVideoPlayer(videoUrl: videoUrl),
+    );
+  }
+
+  // Helper method to create a placeholder post from post ID
+  Post _createPlaceholderPost(int postId, String type) {
+    return Post(
+      id: postId,
+      caption: 'This is a $type post #$postId. Full post data would be loaded from the backend.',
+      imageUrl: '', // Empty for now - would be fetched from backend
+      createdAt: DateTime.now().toIso8601String(),
     );
   }
 
@@ -362,14 +330,11 @@ class _SeeMorePostsPageState extends ConsumerState<SeeMorePostsPage>
 
     return ListView.builder(
       itemCount: profile.likedPosts.length,
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 0),
       itemBuilder: (context, index) {
         final postId = profile.likedPosts[index];
-        return ListTile(
-          title: Text('Liked Post #$postId',
-              style: TextStyle(color: Colors.white)),
-          leading: Icon(Icons.thumb_up, color: Colors.blue),
-        );
+        final placeholderPost = _createPlaceholderPost(postId, 'liked');
+        return _buildHomeStylePost(placeholderPost, profile);
       },
     );
   }
@@ -383,14 +348,11 @@ class _SeeMorePostsPageState extends ConsumerState<SeeMorePostsPage>
 
     return ListView.builder(
       itemCount: profile.taggedPosts.length,
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 0),
       itemBuilder: (context, index) {
         final postId = profile.taggedPosts[index];
-        return ListTile(
-          title: Text('Tagged in Post #$postId',
-              style: TextStyle(color: Colors.white)),
-          leading: Icon(Icons.tag, color: Colors.orange),
-        );
+        final placeholderPost = _createPlaceholderPost(postId, 'tagged');
+        return _buildHomeStylePost(placeholderPost, profile);
       },
     );
   }

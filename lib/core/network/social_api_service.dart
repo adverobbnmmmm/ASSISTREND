@@ -3,7 +3,7 @@ import 'package:assistrend/shared/utils/storage.dart';
 import 'package:http/http.dart' as http;
 
 class SocialApiService {
-  static const String baseUrl = 'https://social-service-aemo.onrender.com/api/'; // Social service on port 8001
+  static const String baseUrl = 'http://10.0.2.2:8001/api/'; // Social service on port 8001
 
   static Future<dynamic> _makeRequest(
     String endpoint,
@@ -228,6 +228,35 @@ class SocialApiService {
     return await _makeRequest(
       'social-service/features/update-socials/',
       {'userId': userId.toString(), 'platform': platform, 'url': url},
+      'POST',
+      token,
+    );
+  }
+
+  // Update Profile Audio URL
+  static Future<dynamic> updateProfileAudio(int userId, String? audioUrl) async {
+    final token = await Storage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+    
+    return await _makeRequest(
+      'social-service/features/update-profile-audio/',
+      {'userId': userId.toString(), 'audioUrl': audioUrl},
+      'POST',
+      token,
+    );
+  }
+
+  static Future<dynamic> updateProfilePhoto(int userId, String? photoUrl) async {
+    final token = await Storage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+    
+    return await _makeRequest(
+      'social-service/features/update-profile-image/',
+      {'userId': userId.toString(), 'profileImageUrl': photoUrl},
       'POST',
       token,
     );

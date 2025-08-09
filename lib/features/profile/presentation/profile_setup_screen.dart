@@ -114,11 +114,16 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       );
       
       if (result != null) {
-        // In a real app, you would upload the file to a server
-        // For now, we'll just store the path
+        // Store the local path for now - in a full implementation,
+        // you would upload this to Cloudinary and get the URL
         setState(() {
           _audioUrl = result.files.first.path;
         });
+        
+        // Optional: Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Audio file selected successfully')),
+        );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
