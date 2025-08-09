@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AssistrendOpening extends StatefulWidget {
   @override
@@ -45,15 +46,19 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
   Future<void> _loopCheckServerAndNavigate() async {
     const String serverUrl = 'http://10.0.2.2:8000/api/account/checkServerStatus';
     while (mounted && !_serverOnline) {
+      print('Checking server status...');
       try {
-        final response = await http.get(Uri.parse(serverUrl));
+        final response = await http.get(Uri.parse(serverUrl)).timeout(Duration(seconds: 2));
+        print('Server response: '
+            'Status: ${response.statusCode} '
+            'Body: ${response.body}');
         if (response.statusCode == 200) {
           setState(() {
             _serverOnline = true;
             _serverMessage = '';
           });
           await _checkAuthAndNavigate();
-          return;
+          break; // Stop checking once online
         } else {
           setState(() {
             _serverOnline = false;
@@ -61,6 +66,7 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
           });
         }
       } catch (e) {
+        print('Error in server check: $e');
         setState(() {
           _serverOnline = false;
           _serverMessage = 'Please wait till server becomes online';
@@ -80,6 +86,23 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
     if (!mounted) return;
     try {
       if (isLoggedIn) {
+        // Fetch user name from backend and store in SharedPreferences
+        try {
+          final url = Uri.parse('http://10.0.2.2:8000/api/account/getName/?userId=$userId');
+          final response = await http.get(url);
+          if (response.statusCode == 200) {
+            final data = json.decode(response.body);
+            final name = data['name'] ?? '';
+            await prefs.setString('user_name', name);
+            print('DEBUG: Stored user_name: $name');
+          } else {
+            await prefs.setString('user_name', '');
+            print('DEBUG: Failed to fetch name, status: ${response.statusCode}');
+          }
+        } catch (e) {
+          await prefs.setString('user_name', '');
+          print('DEBUG: Error fetching name: $e');
+        }
         print('User is logged in, navigating to home');
         context.go('/home');
       } else {

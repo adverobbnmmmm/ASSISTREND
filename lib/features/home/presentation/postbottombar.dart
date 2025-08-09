@@ -44,6 +44,7 @@ class PostBottomBar extends ConsumerWidget {
               style: const TextStyle(color: Colors.white),
             ),
           ),
+          const Spacer(),
           TextButton.icon(
             onPressed: () => _sharePost(context),
             icon: const Icon(
@@ -55,14 +56,8 @@ class PostBottomBar extends ConsumerWidget {
               style: TextStyle(color: Colors.white),
             ),
           ),
-          const Spacer(),
-          IconButton(
-            onPressed: () => _bookmarkPost(context),
-            icon: const Icon(
-              Icons.bookmark_border_outlined,
-              color: Colors.white,
-            ),
-          )
+          
+          
         ],
       ),
     );
@@ -76,7 +71,7 @@ class PostBottomBar extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color.fromARGB(0, 0, 0, 0),
       builder: (context) => CommentsBottomSheet(
         postId: post.id,
         postUsername: post.username ?? 'Anonymous',
@@ -93,12 +88,5 @@ class PostBottomBar extends ConsumerWidget {
     );
   }
 
-  void _bookmarkPost(BuildContext context) {
-    // TODO: Implement bookmark functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Bookmark functionality coming soon!'),
-      ),
-    );
-  }
+
 }

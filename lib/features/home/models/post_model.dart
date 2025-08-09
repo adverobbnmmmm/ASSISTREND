@@ -10,6 +10,7 @@ class Post {
   final int likesCount;
   final bool isLiked;
   final int commentsCount;
+  final String? posterProfileImageUrl;
   
   Post({
     required this.id,
@@ -23,6 +24,7 @@ class Post {
     this.likesCount = 0,
     this.isLiked = false,
     this.commentsCount = 0,
+    this.posterProfileImageUrl,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class Post {
       likesCount: json['likes_count'] as int? ?? 0,
       isLiked: json['is_liked'] as bool? ?? false,
       commentsCount: json['comments_count'] as int? ?? 0,
+      posterProfileImageUrl: json['posterProfileImageUrl'] as String?,
     );
   }
 
@@ -54,6 +57,7 @@ class Post {
       'likes_count': likesCount,
       'is_liked': isLiked,
       'comments_count': commentsCount,
+      'posterProfileImageUrl': posterProfileImageUrl,
     };
   }
 

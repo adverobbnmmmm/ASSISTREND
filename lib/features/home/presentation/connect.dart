@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'chat_page.dart';
+import 'phone_page.dart';
 
 class ConnectButton extends StatefulWidget {
   const ConnectButton({super.key});
@@ -25,6 +27,19 @@ class _ConnectButtonState extends State<ConnectButton>
   void dispose() {
     animationController.dispose();
     super.dispose();
+  }
+
+  void _showStaticPage(BuildContext context, String title) {
+    Widget page;
+    if (title == 'Chat') {
+      page = const ChatPage();
+    } else {
+      page = const PhonePage();
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => page),
+    );
   }
 
   @override
@@ -91,7 +106,9 @@ class _ConnectButtonState extends State<ConnectButton>
                         width: 70,
                         height: 70,
                         text: 'Chat',
-                        onClick: () {},
+                        onClick: () {
+                          _showStaticPage(context, 'Chat');
+                        },
                       ),
                     ),
                   ),
@@ -108,7 +125,9 @@ class _ConnectButtonState extends State<ConnectButton>
                         width: 70,
                         height: 70,
                         text: 'Phone',
-                        onClick: () {},
+                        onClick: () {
+                          _showStaticPage(context, 'Phone');
+                        },
                       ),
                     ),
                   ),

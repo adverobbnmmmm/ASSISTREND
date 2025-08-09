@@ -25,17 +25,18 @@ final searchResultsProvider = FutureProvider.family<List<SearchResultModel>, Str
   }
 
   if (!onlyPosts) {
-    // Search users
-    final userRes = await http.get(Uri.parse('http://10.0.2.2:8001/api/social-service/features/search/users/?q=$actualQuery'));
+    // Search users (current route is without Elastisearch, use the Elastisearch Route which is already implemented while actual hosting)
+    final userRes = await http.get(Uri.parse('http://10.0.2.2:8001/api/social-service/features/searchUsersE/?q=$actualQuery'));
     if (userRes.statusCode == 200) {
       final data = json.decode(userRes.body);
       for (var user in data['results']) {
+        print('User: $user'); // Debugging line
         results.add(SearchResultModel(
           id: user['id'].toString(),
           type: 'profile',
           title: user['name'] ?? '',
           subtitle: user['email'] ?? '',
-          imageUrl: '',
+          imageUrl: user['profileImageUrl'] ?? '',
           timestamp: DateTime.now(),
         ));
       }
@@ -44,10 +45,17 @@ final searchResultsProvider = FutureProvider.family<List<SearchResultModel>, Str
 
   if (!onlyUsers) {
     // Search posts
-    final postRes = await http.get(Uri.parse('http://10.0.2.2:8001/api/social-service/features/search/posts/?q=$actualQuery'));
+    final postRes = await http.get(Uri.parse('http://10.0.2.2:8001/api/social-service/features/searchPostE/?q=$actualQuery'));
     if (postRes.statusCode == 200) {
       final data = json.decode(postRes.body);
-      for (var post in data['results']) {
+      //print('User search results: ${data['results']}');
+      // Handle results as a list of lists
+      final List<dynamic> outerResults = List<dynamic>.from(data['results']);
+      //print('Outer results: $outerResults');
+      // final List<dynamic> postsRaw = outerResults.expand((e) => e).toList();
+      // print('Posts raw: $postsRaw');
+      // print('HERERE!!!!!');
+      for (var post in outerResults) {
         String type = 'text';
         final imageUrl = (post['image_url'] ?? '').replaceAll('"', '');
         if (imageUrl.isNotEmpty) {
@@ -61,7 +69,7 @@ final searchResultsProvider = FutureProvider.family<List<SearchResultModel>, Str
           id: post['id'].toString(),
           type: type,
           title: (post['caption'] ?? '').replaceAll('"', ''),
-          subtitle: post['user'] != null && post['user']['name'] != null ? post['user']['name'] : '',
+          
           imageUrl: imageUrl,
           timestamp: DateTime.tryParse(post['created_at'] ?? '') ?? DateTime.now(),
         ));

@@ -83,6 +83,7 @@ class AppPosts extends StatelessWidget {
             username: post?.username ?? 'Anonymous',
             category: _getCategoryName(post?.category),
             createdAt: post?.createdAt,
+            posterProfileImageUrl: post?.posterProfileImageUrl,
           ),
           if (mediaUrl.isNotEmpty)
             Padding(

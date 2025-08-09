@@ -4,12 +4,14 @@ class PostHeadBar extends StatelessWidget {
   final String username;
   final String? category;
   final DateTime? createdAt;
+  final String? posterProfileImageUrl;
   
   const PostHeadBar({
     super.key,
     required this.username,
     this.category,
     this.createdAt,
+    this.posterProfileImageUrl,
   });
 
   String _formatTimeAgo(DateTime? dateTime) {
@@ -35,16 +37,27 @@ class PostHeadBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
         children: [
-          Container(
-            width: 35,
-            height: 35,
-            decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                image: DecorationImage(
-                    image: AssetImage('assets/dashboard.png'),
-                    fit: BoxFit.fill),
-                color: Colors.grey),
-          ),
+          posterProfileImageUrl != null && posterProfileImageUrl!.isNotEmpty
+              ? Container(
+                  width: 35,
+                  height: 35,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    image: DecorationImage(
+                      image: NetworkImage(posterProfileImageUrl!),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                )
+              : Container(
+                  width: 35,
+                  height: 35,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.grey,
+                  ),
+                  child: const Icon(Icons.person, color: Colors.white, size: 20),
+                ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
