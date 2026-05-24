@@ -7,6 +7,7 @@ import 'assistrend_opening.dart';
 import 'assistrend_forgotpass.dart';
 import 'features/auth/presentation/assistrend_login.dart';
 import 'features/auth/presentation/assistrend_signup.dart';
+import 'features/auth/presentation/multi_step_signup.dart';
 import 'features/auth/presentation/otp_screen.dart';
 import 'features/profile/models/profile_model.dart';
 import 'features/profile/presentation/profile.dart';
@@ -51,6 +52,11 @@ class AppRouter {
         path: '/signup',
         name: 'signup',
         builder: (context, state) => AssistrendSignUp(),
+      ),
+      GoRoute(
+        path: '/multi-step-signup',
+        name: 'multiStepSignup',
+        builder: (context, state) => MultiStepSignUp(),
       ),
       GoRoute(
         path: '/forgot-password',
@@ -150,6 +156,7 @@ class AppRouter {
       final currentPath = state.matchedLocation;
       final isOnAuthPage = currentPath == '/login' || 
                           currentPath == '/signup' || 
+                          currentPath == '/multi-step-signup' ||
                           currentPath == '/forgot-password' ||
                           currentPath == '/otp-verification';
       final isOnOpeningPage = currentPath == '/';

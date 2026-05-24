@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/comment_model.dart';
 
+import 'package:assistrend/config/app_config.dart';
+
 class SocialService {
-  static const String baseUrl = 'http://10.0.2.2:8001/api/social-service/features/';
+  static final String baseUrl = '${AppConfig.socialServerUrl}/api/social-service/features/';
 
   // Like a post
-  static Future<bool> likePost(int postId, int userId) async {
+  static Future<bool> likePost(int postId, String userId) async {
     try {
       final response = await http.get(
         Uri.parse('${baseUrl}addLike/?postId=$postId&userId=$userId'),
@@ -26,7 +28,7 @@ class SocialService {
   }
 
   // Unlike a post
-  static Future<bool> unlikePost(int postId, int userId) async {
+  static Future<bool> unlikePost(int postId, String userId) async {
     try {
       final response = await http.post(
         Uri.parse('${baseUrl}removeLike/'),
@@ -50,7 +52,7 @@ class SocialService {
   }
 
   // Add a comment
-  static Future<bool> addComment(int postId, int userId, String comment) async {
+  static Future<bool> addComment(int postId, String userId, String comment) async {
     try {
       print('Adding comment: postId=$postId, userId=$userId, comment=$comment');
       

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/search_result_model.dart';
+import 'package:assistrend/config/app_config.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -26,7 +27,7 @@ final searchResultsProvider = FutureProvider.family<List<SearchResultModel>, Str
 
   if (!onlyPosts) {
     // Search users (current route is without Elastisearch, use the Elastisearch Route which is already implemented while actual hosting)
-    final userRes = await http.get(Uri.parse('http://10.0.2.2:8001/api/social-service/features/searchUsersE/?q=$actualQuery'));
+    final userRes = await http.get(Uri.parse('${AppConfig.socialServerUrl}/api/social-service/features/searchUsersE/?q=$actualQuery'));
     if (userRes.statusCode == 200) {
       final data = json.decode(userRes.body);
       for (var user in data['results']) {
@@ -45,7 +46,7 @@ final searchResultsProvider = FutureProvider.family<List<SearchResultModel>, Str
 
   if (!onlyUsers) {
     // Search posts
-    final postRes = await http.get(Uri.parse('http://10.0.2.2:8001/api/social-service/features/searchPostE/?q=$actualQuery'));
+    final postRes = await http.get(Uri.parse('${AppConfig.socialServerUrl}/api/social-service/features/searchPostE/?q=$actualQuery'));
     if (postRes.statusCode == 200) {
       final data = json.decode(postRes.body);
       //print('User search results: ${data['results']}');

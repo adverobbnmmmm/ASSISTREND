@@ -18,7 +18,7 @@ class DebugLogout extends StatelessWidget {
               onPressed: () async {
                 final prefs = await SharedPreferences.getInstance();
                 final token = prefs.getString('access_token');
-                final userId = prefs.getInt('user_id');
+                final userId = prefs.getString('user_id');
                 
                 showDialog(
                   context: context,

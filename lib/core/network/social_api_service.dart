@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:assistrend/shared/utils/storage.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:assistrend/config/app_config.dart';
+
 class SocialApiService {
-  static const String baseUrl = 'http://10.0.2.2:8001/api/'; // Social service on port 8001
+  static final String baseUrl = AppConfig.socialApiBaseUrl;
 
   static Future<dynamic> _makeRequest(
     String endpoint,
@@ -66,7 +68,7 @@ class SocialApiService {
   }
 
   // Get Profile Data by User ID
-  static Future<Map<String, dynamic>> getProfileData(int userId) async {
+  static Future<Map<String, dynamic>> getProfileData(String userId) async {
     final token = await Storage.getToken();
     if (token == null) {
       throw Exception('No authentication token found');
@@ -81,7 +83,7 @@ class SocialApiService {
   }
 
   // Update Profile
-  static Future<dynamic> updateProfile(int userId, Map<String, dynamic> profileData) async {
+  static Future<dynamic> updateProfile(String userId, Map<String, dynamic> profileData) async {
     final token = await Storage.getToken();
     if (token == null) {
       throw Exception('No authentication token found');
@@ -144,7 +146,7 @@ class SocialApiService {
   }
 
   // Get User Stories
-  static Future<dynamic> getUserStories(int userId) async {
+  static Future<dynamic> getUserStories(String userId) async {
     final token = await Storage.getToken();
     if (token == null) {
       throw Exception('No authentication token found');
@@ -159,7 +161,7 @@ class SocialApiService {
   }
 
   // Update Name
-  static Future<dynamic> updateName(int userId, String name) async {
+  static Future<dynamic> updateName(String userId, String name) async {
     final token = await Storage.getToken();
     if (token == null) {
       throw Exception('No authentication token found');
@@ -167,14 +169,14 @@ class SocialApiService {
     
     return await _makeRequest(
       'social-service/features/update-name/',
-      {'userId': userId.toString(), 'name': name},
+      {'userId': userId, 'name': name},
       'POST',
       token,
     );
   }
 
   // Update About
-  static Future<dynamic> updateAbout(int userId, String about) async {
+  static Future<dynamic> updateAbout(String userId, String about) async {
     final token = await Storage.getToken();
     if (token == null) {
       throw Exception('No authentication token found');
@@ -182,14 +184,14 @@ class SocialApiService {
     
     return await _makeRequest(
       'social-service/features/update-about/',
-      {'userId': userId.toString(), 'about': about},
+      {'userId': userId, 'about': about},
       'POST',
       token,
     );
   }
 
   // Update Emoji
-  static Future<dynamic> updateEmoji(int userId, String emoji) async {
+  static Future<dynamic> updateEmoji(String userId, String emoji) async {
     final token = await Storage.getToken();
     if (token == null) {
       throw Exception('No authentication token found');
@@ -197,14 +199,14 @@ class SocialApiService {
     
     return await _makeRequest(
       'social-service/features/update-emoji/',
-      {'userId': userId.toString(), 'emoji': emoji},
+      {'userId': userId, 'emoji': emoji},
       'POST',
       token,
     );
   }
 
   // Update Interests
-  static Future<dynamic> updateInterests(int userId, List<String> interests) async {
+  static Future<dynamic> updateInterests(String userId, List<String> interests) async {
     final token = await Storage.getToken();
     if (token == null) {
       throw Exception('No authentication token found');
@@ -212,14 +214,14 @@ class SocialApiService {
     
     return await _makeRequest(
       'social-service/features/update-interests/',
-      {'userId': userId.toString(), 'interests': interests},
+      {'userId': userId, 'interests': interests},
       'POST',
       token,
     );
   }
 
   // Update Socials
-  static Future<dynamic> updateSocials(int userId, String platform, String url) async {
+  static Future<dynamic> updateSocials(String userId, String platform, String url) async {
     final token = await Storage.getToken();
     if (token == null) {
       throw Exception('No authentication token found');
@@ -227,14 +229,14 @@ class SocialApiService {
     
     return await _makeRequest(
       'social-service/features/update-socials/',
-      {'userId': userId.toString(), 'platform': platform, 'url': url},
+      {'userId': userId, 'platform': platform, 'url': url},
       'POST',
       token,
     );
   }
 
   // Update Profile Audio URL
-  static Future<dynamic> updateProfileAudio(int userId, String? audioUrl) async {
+  static Future<dynamic> updateProfileAudio(String userId, String? audioUrl) async {
     final token = await Storage.getToken();
     if (token == null) {
       throw Exception('No authentication token found');
@@ -242,21 +244,21 @@ class SocialApiService {
     
     return await _makeRequest(
       'social-service/features/update-profile-audio/',
-      {'userId': userId.toString(), 'audioUrl': audioUrl},
+      {'userId': userId, 'audioUrl': audioUrl},
       'POST',
       token,
     );
   }
 
-  static Future<dynamic> updateProfilePhoto(int userId, String? photoUrl) async {
+  static Future<dynamic> updateProfilePhoto(String userId, String? photoUrl) async {
     final token = await Storage.getToken();
     if (token == null) {
       throw Exception('No authentication token found');
     }
     
     return await _makeRequest(
-      'social-service/features/update-profile-image/',
-      {'userId': userId.toString(), 'profileImageUrl': photoUrl},
+      'social-service/features/update-profile-photo/',
+      {'userId': userId, 'profileImageUrl': photoUrl},
       'POST',
       token,
     );

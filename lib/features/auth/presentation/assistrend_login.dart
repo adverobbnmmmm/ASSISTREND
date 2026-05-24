@@ -70,52 +70,50 @@ class _AssistrendLoginState extends ConsumerState<AssistrendLogin> {
   }
 
   Future<void> _handleGoogleSignIn() async {
+    if (_isLoading) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       final GoogleSignIn _googleSignIn = GoogleSignIn(
         scopes: ['email', 'profile'],
       );
 
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return; // User canceled the login
+      if (googleUser == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return; // User canceled the login
+      }
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
-      final String? accessToken = googleAuth.accessToken;
 
-      // Send the ID token to your Django backend for verification (using your callback URL)
-      final response = await http.post(
-        Uri.parse('http://10.0.2.2:8000/auth/google/'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'id_token': idToken, 'access_token': accessToken}),
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        final String backendAccessToken = responseData['access'];
-        final String backendRefreshToken = responseData['refresh'] ?? '';
-        final int userId = responseData['userId'] ?? 0;
-
-        // Store the tokens and user ID using Riverpod state
-        ref.read(authProvider.notifier).state = AuthState.authenticated(
-          accessToken: backendAccessToken,
-          refreshToken: backendRefreshToken,
-          userId: userId,
-        );
-
-        if (context.mounted) {
-          context.go('/home');
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google Sign-In failed. Please try again.')),
-        );
+      if (idToken == null) {
+        _showError('Failed to get Google ID token');
+        setState(() {
+          _isLoading = false;
+        });
+        return;
       }
+
+      // Use the new OAuth login endpoint
+      await ref.read(authProvider.notifier).googleOAuthLogin(idToken);
+
+      // Navigation is handled by the listener
     } catch (error) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Google Sign-In Error: $error')));
-      print("111111111111  $error");
+      _showError('Google Sign-In Error: $error');
+      print('Google Sign-In Error: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -261,8 +259,8 @@ class _AssistrendLoginState extends ConsumerState<AssistrendLogin> {
               SizedBox(height: 50),
               GestureDetector(
                 onTap: () {
-                  // Navigate to signup using GoRouter
-                  context.push('/signup');
+                  // Navigate to multi-step signup using GoRouter
+                  context.push('/multi-step-signup');
                 },
                 child: Text.rich(
                   TextSpan(

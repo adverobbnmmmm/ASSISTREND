@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/api_service.dart';
-import '../providers/auth_provider.dart';
-import '../models/auth_state.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/network/api_service.dart';
+import '../providers/signup_provider.dart';
 
 class OTPScreen extends ConsumerStatefulWidget {
   final String email;
@@ -17,11 +16,27 @@ class OTPScreen extends ConsumerStatefulWidget {
 class _OTPScreenState extends ConsumerState<OTPScreen> {
   final TextEditingController _otpController = TextEditingController();
   bool _isLoading = false;
+  int _remainingAttempts = 5;
+  bool _otpExpired = false;
 
   void _showError(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showSuccess(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+        ),
       );
     }
   }
@@ -38,7 +53,6 @@ class _OTPScreenState extends ConsumerState<OTPScreen> {
       return;
     }
 
-    // Additional validation: ensure OTP is numeric
     if (!RegExp(r'^\d{6}$').hasMatch(_otpController.text)) {
       _showError('OTP must be exactly 6 digits');
       return;
@@ -49,19 +63,39 @@ class _OTPScreenState extends ConsumerState<OTPScreen> {
     });
 
     try {
-      // Debug: Print what we're sending
       print('DEBUG: Verifying OTP for email: ${widget.email}');
       print('DEBUG: OTP code: ${_otpController.text}');
-      print('DEBUG: Email length: ${widget.email.length}');
-      print('DEBUG: OTP length: ${_otpController.text.length}');
       
-      // Use the Riverpod provider to verify OTP
-      await ref.read(authProvider.notifier).verifyOTP(
-        widget.email.trim().toLowerCase(), // Clean the email
-        _otpController.text.trim(), // Clean the OTP
+      // Verify OTP via API
+      final response = await ApiService.verifyEmailOTP(
+        widget.email.trim().toLowerCase(),
+        _otpController.text.trim(),
       );
 
-      // Navigation will be handled by the auth state listener
+      if (response['success'] == true) {
+        _showSuccess('Email verified successfully!');
+        
+        // Navigate to home page after successful verification
+        if (mounted) {
+          await Future.delayed(Duration(milliseconds: 500));
+          context.go('/home');
+        }
+      } else {
+        final error = response['error'] ?? 'OTP verification failed';
+        final remainingAttempts = response['remaining_attempts'] ?? 0;
+        
+        if (remainingAttempts != null) {
+          setState(() {
+            _remainingAttempts = remainingAttempts;
+            if (_remainingAttempts <= 0) {
+              _otpExpired = true;
+            }
+          });
+          _showError('$error. Remaining attempts: $_remainingAttempts');
+        } else {
+          _showError(error);
+        }
+      }
     } catch (e) {
       print('DEBUG: OTP verification error: $e');
       _showError('OTP verification failed: $e');
@@ -74,61 +108,47 @@ class _OTPScreenState extends ConsumerState<OTPScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Listen to auth state changes
-    ref.listen(authProvider, (previous, current) async {
-      if (current.status == AuthStatus.authenticated) {
-        // Check if user has completed profile setup
-        final userId = current.userId;
-        print('DEBUG OTP: User authenticated, userId: $userId');
-        if (userId != null) {
-          try {
-            print('DEBUG OTP: Checking profile exists for userId: $userId');
-            final response = await ApiService.checkProfileExists(userId.toString());
-            print('DEBUG OTP: Profile check response: $response');
-            final profileExists = response['profileExists'] ?? false;
-            print('DEBUG OTP: Profile exists: $profileExists');
-            
-            if (profileExists) {
-              // Profile exists, go to home
-              print('DEBUG OTP: Navigating to home');
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Welcome back to Assistrend!')),
-              );
-              context.go('/home');
-            } else {
-              // Profile doesn't exist, go to profile setup
-              print('DEBUG OTP: Navigating to profile setup');
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Please complete your profile setup')),
-              );
-              context.go('/profile-setup');
-            }
-          } catch (e) {
-            // Error checking profile, go to profile setup to be safe
-            print('DEBUG OTP: Error checking profile: $e');
-            context.go('/profile-setup');
-          }
-        } else {
-          // No user ID, go to profile setup
-          print('DEBUG OTP: No user ID, going to profile setup');
-          context.go('/profile-setup');
-        }
-      } else if (current.status == AuthStatus.error && current.errorMessage != null) {
-        _showError(current.errorMessage!);
-      }
+  Future<void> _resendOTP() async {
+    setState(() {
+      _isLoading = true;
     });
 
+    try {
+      final response = await ApiService.resendEmailOTP(widget.email);
+      
+      if (response['success'] == true) {
+        _showSuccess('OTP resent to ${widget.email}');
+        setState(() {
+          _otpExpired = false;
+          _remainingAttempts = 5;
+          _otpController.clear();
+        });
+      } else {
+        _showError(response['error'] ?? 'Failed to resend OTP');
+      }
+    } catch (e) {
+      print('DEBUG: Resend OTP error: $e');
+      _showError('Failed to resend OTP: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: Text('Verify OTP'),
+        title: Text('Verify Email'),
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            context.go('login');// Go back
+            context.go('/login');
           },
         ),
       ),
@@ -139,108 +159,188 @@ class _OTPScreenState extends ConsumerState<OTPScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(height: 40),
-              Text(
-                'Enter OTP',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+              // Header
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Please enter the verification code sent to ${widget.email}',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 16,
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.mail_outline,
+                      size: 48,
+                      color: Colors.blueAccent,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Verify Your Email',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'We sent a verification code to',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      widget.email,
+                      style: TextStyle(
+                        color: Colors.blueAccent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
               SizedBox(height: 40),
+              
+              // OTP Input
               TextField(
                 controller: _otpController,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
-                style: TextStyle(color: Colors.white),
+                enabled: !_isLoading && !_otpExpired,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  letterSpacing: 12,
+                  fontWeight: FontWeight.bold,
+                ),
                 decoration: InputDecoration(
-                  labelText: 'Enter OTP',
-                  labelStyle: TextStyle(color: Colors.grey),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.blueAccent),
+                  hintText: '000000',
+                  hintStyle: TextStyle(color: Colors.grey[600]),
+                  counterText: '',
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.blueAccent),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  disabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey[700]!, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
-              SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _verifyOTP,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 40, 108, 224),
-                  padding: EdgeInsets.symmetric(horizontal: 100, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                ),
-                child: _isLoading
-                    ? CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                        'Verify',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
-              SizedBox(height: 20),
-              TextButton(
-                onPressed: () {
-                  // Resend OTP implementation
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('OTP resent to ${widget.email}')),
-                  );
-                },
-                child: Text(
-                  "Didn't receive the code? Resend",
+              SizedBox(height: 12),
+              
+              // Remaining attempts indicator
+              if (_remainingAttempts > 0 && _remainingAttempts < 5)
+                Text(
+                  'Remaining attempts: $_remainingAttempts',
                   style: TextStyle(
-                    color: Colors.blueAccent,
-                    fontSize: 16,
+                    color: _remainingAttempts <= 2 ? Colors.orange : Colors.grey[400],
+                    fontSize: 12,
                   ),
+                ),
+              
+              SizedBox(height: 24),
+              
+              // Verify Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: (_isLoading || _otpExpired) ? null : _verifyOTP,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    disabledBackgroundColor: Colors.grey[700],
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          'Verify OTP',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
               SizedBox(height: 20),
               
-              // Debug test button - remove this after testing
-              if (true) // Change to false to hide this button
-                ElevatedButton(
-                  onPressed: () async {
-                    // Test with hardcoded values
-                    try {
-                      print('DEBUG: Testing with hardcoded values');
-                      final testResponse = await ApiService.verifyOTP(
-                        widget.email.trim().toLowerCase(), 
-                        '123456'  // Test OTP
-                      );
-                      print('DEBUG: Test response: $testResponse');
-                      _showError('Test call successful - check console');
-                    } catch (e) {
-                      print('DEBUG: Test error: $e');
-                      _showError('Test error: $e');
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 8),
+              // Resend OTP
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Didn't receive the code? ",
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 14,
+                    ),
                   ),
-                  child: Text('DEBUG TEST', style: TextStyle(color: Colors.white)),
+                  TextButton(
+                    onPressed: _isLoading ? null : _resendOTP,
+                    child: Text(
+                      'Resend',
+                      style: TextStyle(
+                        color: Colors.blueAccent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              // Expiry message
+              if (_otpExpired)
+                Padding(
+                  padding: EdgeInsets.only(top: 20),
+                  child: Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red[900],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'OTP expired. Please request a new one.',
+                      style: TextStyle(
+                        color: Colors.red[100],
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
-              SizedBox(height: 20),
             ],
           ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _otpController.dispose();
+    super.dispose();
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:assistrend/config/app_config.dart';
 
 class GoogleSignInService {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -22,7 +23,7 @@ class GoogleSignInService {
 
       // Send the accessToken to your Django backend for verification
       final response = await http.post(
-        Uri.parse('http://localhost:8000/auth/google/'),  // Adjust this URL to your Django backend endpoint
+        Uri.parse('${AppConfig.mainServerUrl}/auth/google/'),  // Adjust this URL to your Django backend endpoint
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'access_token': accessToken,

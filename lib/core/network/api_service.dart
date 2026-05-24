@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'package:assistrend/shared/utils/storage.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:assistrend/config/app_config.dart';
+
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2:8000/api/'; 
-  static const String socialServiceUrl = 'http://10.0.2.2:8001/api/social-service/';
+  static final String baseUrl = AppConfig.apiBaseUrl;
+  static final String socialServiceUrl = AppConfig.socialApiBaseUrl;
 
   static Future<dynamic> _makeRequest(
     String endpoint,
@@ -95,6 +97,106 @@ class ApiService {
     );
   }
 
+  // Multi-step Signup - Step 1: Email and Username
+  static Future<dynamic> signupStep1(String email, String username, {String? sessionId}) async {
+    return await _makeRequest(
+      'v1/accounts/auth/signup/step_1/',
+      {
+        'email': email,
+        'username': username,
+        if (sessionId != null) 'session_id': sessionId,
+      },
+      'POST',
+      null,
+    );
+  }
+
+  // Multi-step Signup - Step 2: Password
+  static Future<dynamic> signupStep2(String password, String confirmPassword, {required String sessionId}) async {
+    return await _makeRequest(
+      'v1/accounts/auth/signup/step_2/',
+      {
+        'password': password,
+        'confirm_password': confirmPassword,
+        'session_id': sessionId,
+      },
+      'POST',
+      null,
+    );
+  }
+
+  // Multi-step Signup - Step 3: Personal Info
+  static Future<dynamic> signupStep3(String gender, String dateOfBirth, {required String sessionId}) async {
+    return await _makeRequest(
+      'v1/accounts/auth/signup/step_3/',
+      {
+        'gender': gender,
+        'date_of_birth': dateOfBirth,
+        'session_id': sessionId,
+      },
+      'POST',
+      null,
+    );
+  }
+
+  // Multi-step Signup - Step 4: Phone Number
+  static Future<dynamic> signupStep4(String phoneNumber, {required String sessionId}) async {
+    return await _makeRequest(
+      'v1/accounts/auth/signup/step_4/',
+      {
+        'phone_number': phoneNumber,
+        'session_id': sessionId,
+      },
+      'POST',
+      null,
+    );
+  }
+
+  // Multi-step Signup - Step 5: Privacy Policy
+  static Future<dynamic> signupStep5(bool privacyPolicyAccepted, {required String sessionId}) async {
+    return await _makeRequest(
+      'v1/accounts/auth/signup/step_5/',
+      {
+        'privacy_policy_accepted': privacyPolicyAccepted,
+        'session_id': sessionId,
+      },
+      'POST',
+      null,
+    );
+  }
+
+  // Multi-step Signup - Complete
+  static Future<dynamic> signupComplete({required String sessionId}) async {
+    return await _makeRequest(
+      'v1/accounts/auth/signup/complete/',
+      {
+        'session_id': sessionId,
+      },
+      'POST',
+      null,
+    );
+  }
+
+  // Validate email availability
+  static Future<dynamic> validateEmail(String email) async {
+    return await _makeRequest(
+      'v1/accounts/auth/signup/validate_email/',
+      {'email': email},
+      'POST',
+      null,
+    );
+  }
+
+  // Validate username availability
+  static Future<dynamic> validateUsername(String username) async {
+    return await _makeRequest(
+      'v1/accounts/auth/signup/validate_username/',
+      {'username': username},
+      'POST',
+      null,
+    );
+  }
+
   // OTP Verification
   static Future<dynamic> verifyOTP(String email, String otp) async {
     return await _makeRequest(
@@ -108,10 +210,46 @@ class ApiService {
     );
   }
 
-  // User Login
+  // Email Verification - Send OTP
+  static Future<dynamic> sendEmailOTP(String email, {String verificationType = 'email'}) async {
+    return await _makeRequest(
+      'v1/accounts/auth/email-verification/send_otp/',
+      {
+        'email': email,
+        'verification_type': verificationType,
+      },
+      'POST',
+      null,
+    );
+  }
+
+  // Email Verification - Verify OTP
+  static Future<dynamic> verifyEmailOTP(String email, String otpCode) async {
+    return await _makeRequest(
+      'v1/accounts/auth/email-verification/verify_otp/',
+      {
+        'email': email,
+        'otp_code': otpCode,
+      },
+      'POST',
+      null,
+    );
+  }
+
+  // Email Verification - Resend OTP
+  static Future<dynamic> resendEmailOTP(String email) async {
+    return await _makeRequest(
+      'v1/accounts/auth/email-verification/resend_otp/',
+      {'email': email},
+      'POST',
+      null,
+    );
+  }
+
+  // User Login with email and password
   static Future<dynamic> login(String email, String password) async {
     return await _makeRequest(
-      'account/login/',
+      'v1/accounts/auth/auth/login/',
       {
         'email': email,
         'password': password,
@@ -122,26 +260,51 @@ class ApiService {
   }
 
   // User Logout
-  static Future<void> logout(String refreshToken) async {
-    try {
-      final response = await http.post(
-        Uri.parse('${baseUrl}account/logout/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $refreshToken',
-        },
-        body: json.encode({
-          'refresh_token': refreshToken,
-        }),
-      );
-      
-      if (response.statusCode != 205) {
-        throw Exception('Logout failed: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error during logout: $e');
-      throw Exception('Logout request failed: $e');
-    }
+  static Future<dynamic> logout(String refreshToken) async {
+    return await _makeRequest(
+      'v1/accounts/auth/auth/logout/',
+      {
+        'refresh_token': refreshToken,
+      },
+      'POST',
+      null,
+    );
+  }
+
+  // Refresh access token
+  static Future<dynamic> refreshAccessToken(String refreshToken) async {
+    return await _makeRequest(
+      'v1/accounts/auth/auth/refresh_token/',
+      {
+        'refresh': refreshToken,
+      },
+      'POST',
+      null,
+    );
+  }
+
+  // Google OAuth login
+  static Future<dynamic> googleLogin(String googleToken) async {
+    return await _makeRequest(
+      'v1/accounts/auth/auth/google_login/',
+      {
+        'token': googleToken,
+      },
+      'POST',
+      null,
+    );
+  }
+
+  // OAuth callback after email verification
+  static Future<dynamic> oauthCallback(String email) async {
+    return await _makeRequest(
+      'v1/accounts/auth/auth/oauth_callback/',
+      {
+        'email': email,
+      },
+      'POST',
+      null,
+    );
   }
 
   // Get User Profile (basic info from auth service)

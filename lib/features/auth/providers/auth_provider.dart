@@ -141,7 +141,73 @@ class AuthNotifier extends StateNotifier<AuthState> {
     print('Auth provider logout completed');
   }
 
-  Future<void> loginWithGoogle(String accessToken, String refreshToken, int userId) async {
+  Future<void> googleOAuthLogin(String googleIdToken) async {
+    try {
+      state = state.copyWith(status: AuthStatus.authenticating);
+
+      // Send Google token to backend
+      final response = await ApiService.googleLogin(googleIdToken);
+      
+      if (response['success'] == true) {
+        // If verification is required, return and wait for OTP
+        if (response['requires_verification'] == true) {
+          state = state.copyWith(
+            status: AuthStatus.unauthenticated,
+            errorMessage: 'Please verify your email to complete login'
+          );
+          return;
+        }
+
+        // Otherwise, tokens are returned directly
+        final accessToken = response['access'];
+        final refreshToken = response['refresh'];
+        final userId = response['userId'];
+
+        // Store tokens and user ID
+        await Storage.saveToken(accessToken);
+        await Storage.saveRefreshToken(refreshToken);
+        await Storage.saveUserId(userId);
+
+        // Update state
+        state = AuthState.authenticated(
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+          userId: userId,
+        );
+      } else {
+        throw Exception(response['error'] ?? 'Google OAuth failed');
+      }
+    } catch (e) {
+      state = AuthState.error('Google login failed: $e');
+    }
+  }
+
+  Future<void> refreshAccessToken() async {
+    try {
+      final refreshToken = await Storage.getRefreshToken();
+      if (refreshToken == null) {
+        state = AuthState.unauthenticated();
+        return;
+      }
+
+      final response = await ApiService.refreshAccessToken(refreshToken);
+      
+      if (response['success'] == true) {
+        final newAccessToken = response['access'];
+        await Storage.saveToken(newAccessToken);
+        
+        state = state.copyWith(status: AuthStatus.authenticated);
+      } else {
+        // Refresh token invalid, logout user
+        await logout();
+      }
+    } catch (e) {
+      print('Token refresh failed: $e');
+      await logout();
+    }
+  }
+
+  Future<void> loginWithGoogle(String accessToken, String refreshToken, String userId) async {
     try {
       state = state.copyWith(status: AuthStatus.authenticating);
 

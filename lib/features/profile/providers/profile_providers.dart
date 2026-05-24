@@ -7,6 +7,7 @@ import '../models/profile_model.dart';
 import '../../../shared/utils/storage.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/network/social_api_service.dart'; // Updated import
+import '../../../config/app_config.dart';
 
 // State for profile loading
 enum ProfileStatus { initial, loading, loaded, error }
@@ -38,7 +39,7 @@ class ProfileState {
 class ProfileNotifier extends StateNotifier<ProfileState> {
   ProfileNotifier() : super(ProfileState(profile: ProfileModel.empty()));
 
-  Future<void> fetchProfile(int userId) async {
+  Future<void> fetchProfile(String userId) async {
     try {
       state = state.copyWith(status: ProfileStatus.loading);
 
@@ -59,7 +60,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   }
   
   // Add method to update profile
-  Future<void> updateProfile(int userId, {
+  Future<void> updateProfile(String userId, {
     String? name,
     String? about,
     String? emoji,
@@ -165,44 +166,4 @@ Widget _buildProfileHeader(ProfileModel profile) {
       ],
     ),
   );
-}
-
-// In SocialApiService.dart, make sure the getProfileData method URL is correct:
- Future<Map<String, dynamic>> getProfileData(int userId) async {
-  final token = await Storage.getToken();
-  if (token == null) {
-    throw Exception('No authentication token found');
-  }
-  
-  return await _makeRequest(
-    'social-service/features/profile?userId=$userId',
-  );
-}
-
-// Add this method to your profile provider class
-
-// Add this method to your profile provider class
-Future<dynamic> _makeRequest(String endpoint, {Map<String, dynamic>? data, String method = 'GET', String? token}) async {
-  final baseUrl = 'http://10.0.2.2:8001';
-  final url = Uri.parse('$baseUrl/$endpoint');
-  
-  final headers = {
-    'Content-Type': 'application/json',
-    if (token != null) 'Authorization': 'Bearer $token',
-  };
-  
-  try {
-    final response = method == 'POST' 
-      ? await http.post(url, body: jsonEncode(data), headers: headers)
-      : await http.get(url, headers: headers);
-    
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to make API request: ${response.statusCode}');
-    }
-  } catch (e) {
-    print('Error making request: $e');
-    throw e;
-  }
 }

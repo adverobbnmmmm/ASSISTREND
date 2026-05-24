@@ -11,7 +11,7 @@ class AuthState {
   final AuthStatus status;
   final String? accessToken;
   final String? refreshToken;
-  final int? userId;
+  final String? userId;
   final String? errorMessage;
 
   AuthState({
@@ -26,7 +26,7 @@ class AuthState {
     AuthStatus? status,
     String? accessToken,
     String? refreshToken,
-    int? userId,
+    String? userId,
     String? errorMessage,
   }) {
     return AuthState(
@@ -42,7 +42,7 @@ class AuthState {
   static AuthState authenticated({
     required String accessToken,
     required String refreshToken,
-    required int userId,
+    required String userId,
   }) {
     return AuthState(
       status: AuthStatus.authenticated,

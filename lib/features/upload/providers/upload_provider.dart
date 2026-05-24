@@ -13,6 +13,7 @@ import '../services/mobile_media_picker.dart';
 import '../services/gallery_service.dart';
 import '../services/audio_recorder_service.dart';
 import '../../../shared/utils/storage.dart';
+import 'package:assistrend/config/app_config.dart';
 
 // Define state for upload feature
 class UploadState {
@@ -423,7 +424,7 @@ class UploadNotifier extends StateNotifier<UploadState> {
         }
       }
       
-      final url = 'http://10.0.2.2:8001';
+      final url = AppConfig.socialServerUrl;
       
       // Prepare request body
       final Map<String, dynamic> requestBody = {

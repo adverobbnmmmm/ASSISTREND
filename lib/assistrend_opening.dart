@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:assistrend/config/app_config.dart';
 
 class AssistrendOpening extends StatefulWidget {
   @override
@@ -44,7 +45,7 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
   }
 
   Future<void> _loopCheckServerAndNavigate() async {
-    const String serverUrl = 'http://10.0.2.2:8000/api/account/checkServerStatus';
+    final String serverUrl = AppConfig.healthCheckUrl;
     while (mounted && !_serverOnline) {
       print('Checking server status...');
       try {
@@ -80,7 +81,7 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
     await Future.delayed(Duration(milliseconds: 500));
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
-    final userId = prefs.getInt('user_id');
+    final userId = prefs.getString('user_id');
     print('DEBUG: Token in opening screen: $token, UserId: $userId');
     final isLoggedIn = token != null && userId != null;
     if (!mounted) return;
@@ -88,7 +89,7 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
       if (isLoggedIn) {
         // Fetch user name from backend and store in SharedPreferences
         try {
-          final url = Uri.parse('http://10.0.2.2:8000/api/account/getName/?userId=$userId');
+          final url = Uri.parse('${AppConfig.getNameEndpoint}?userId=$userId');
           final response = await http.get(url);
           if (response.statusCode == 200) {
             final data = json.decode(response.body);
