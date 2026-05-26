@@ -39,11 +39,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final accessToken = response['access'];
       final refreshToken = response['refresh'];
       final userId = response['userId'];
+      final userObj = response['user'] as Map<String, dynamic>?;
+      final isProfileComplete = userObj?['is_profile_complete'] == true;
 
       // Store tokens and user ID
       await Storage.saveToken(accessToken);
       await Storage.saveRefreshToken(refreshToken);
       await Storage.saveUserId(userId);
+      await Storage.saveProfileComplete(isProfileComplete);
 
       // Update state
       state = AuthState.authenticated(
@@ -83,6 +86,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final accessToken = response['access'];
       final refreshToken = response['refresh'];
       final userId = response['userId'];
+      final userObj = response['user'] as Map<String, dynamic>?;
+      final isProfileComplete = userObj?['is_profile_complete'] == true;
 
       print('Tokens received - Access: ${accessToken != null ? 'present' : 'null'}, UserId: $userId');
 
@@ -90,6 +95,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await Storage.saveToken(accessToken);
       await Storage.saveRefreshToken(refreshToken);
       await Storage.saveUserId(userId);
+      await Storage.saveProfileComplete(isProfileComplete);
 
       // Update state to authenticated
       state = AuthState.authenticated(
@@ -162,11 +168,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final accessToken = response['access'];
         final refreshToken = response['refresh'];
         final userId = response['userId'];
+        final userObj = response['user'] as Map<String, dynamic>?;
+        final isProfileComplete = userObj?['is_profile_complete'] == true;
 
         // Store tokens and user ID
         await Storage.saveToken(accessToken);
         await Storage.saveRefreshToken(refreshToken);
         await Storage.saveUserId(userId);
+        await Storage.saveProfileComplete(isProfileComplete);
 
         // Update state
         state = AuthState.authenticated(

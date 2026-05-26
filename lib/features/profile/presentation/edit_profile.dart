@@ -63,10 +63,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         throw Exception('User not authenticated');
       }
 
-      await SocialApiService.updateName(
-        userId,
-        nameController.text.trim(),
-      );
       
       // Update the profile in the state
       await ref.read(profileProvider.notifier).updateProfile(
@@ -103,10 +99,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         throw Exception('User not authenticated');
       }
 
-      await SocialApiService.updateAbout(
-        userId,
-        aboutController.text.trim(),
-      );
       
       // Update the profile in the state
       await ref.read(profileProvider.notifier).updateProfile(
@@ -143,10 +135,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         throw Exception('User not authenticated');
       }
 
-      await SocialApiService.updateEmoji(
-        userId,
-        emojiController.text,
-      );
       
       // Update the profile in the state
       await ref.read(profileProvider.notifier).updateProfile(
@@ -249,7 +237,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         throw Exception('User not authenticated');
       }
 
-      await SocialApiService.updateProfileAudio(userId, audioUrl);
+      await ref.read(profileProvider.notifier).updateProfile(
+        userId,
+        audioUrl: audioUrl,
+      );
       
       setState(() {
         successMessage = audioUrl != null 
@@ -286,7 +277,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         throw Exception('User not authenticated');
       }
 
-      await SocialApiService.updateProfilePhoto(userId, photoUrl);
+      await ref.read(profileProvider.notifier).updateProfile(
+        userId,
+        profileImageUrl: photoUrl,
+      );
       
       setState(() {
         successMessage = photoUrl != null 

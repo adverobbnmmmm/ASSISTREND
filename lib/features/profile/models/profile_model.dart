@@ -34,42 +34,45 @@ class ProfileModel {
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
+    // Check if wrapped in data object
+    final data = json['data'] ?? json;
+    
     return ProfileModel(
-      name: json['name'] ?? '',
-      username: json['username'] ?? '',
-      emoji: json['emoji'] ?? '',
-      about: json['about'] ?? '',
-      badges: (json['badges'] as List<dynamic>?)
+      name: data['display_name'] ?? data['name'] ?? '',
+      username: data['username'] ?? '',
+      emoji: data['emoji'] ?? '',
+      about: data['bio'] ?? data['about'] ?? '',
+      badges: (data['badges'] as List<dynamic>?)
               ?.map((badge) => Badge.fromJson(badge))
               .toList() ??
           [],
-      points: json['points'] ?? 0,
-      posts: (json['posts'] as List<dynamic>?)
+      points: data['points'] ?? 0,
+      posts: (data['posts'] as List<dynamic>?)
               ?.map((post) => Post.fromJson(post))
               .toList() ??
           [],
-      stories: (json['stories'] as List<dynamic>?)
+      stories: (data['stories'] as List<dynamic>?)
               ?.map((story) => Story.fromJson(story))
               .toList() ??
           [],
-      likedPosts: (json['likedPosts'] as List<dynamic>?)
+      likedPosts: (data['likedPosts'] as List<dynamic>?)
               ?.map((like) => like['post_id'] as int)
               .toList() ??
           [],
-      taggedPosts: (json['taggedPosts'] as List<dynamic>?)
+      taggedPosts: (data['taggedPosts'] as List<dynamic>?)
               ?.map((tag) => tag['post_id'] as int)
               .toList() ??
           [],
-      socials: (json['socials'] as List<dynamic>?)
+      socials: (data['socials'] as List<dynamic>?)
               ?.map((social) => SocialLink.fromJson(social))
               .toList() ??
           [],
-      interests: (json['interests'] as List<dynamic>?)
+      interests: (data['interests'] as List<dynamic>?)
               ?.map((interest) => interest['interestId__interestName'] as String)
               .toList() ??
           [],
-      audioUrl: json['audioUrl'], // Add audio URL parsing
-      profileImageUrl: json['profileImageUrl'], // Add profile image URL parsing
+      audioUrl: data['audio_intro_url'] ?? data['audioUrl'], // Add audio URL parsing
+      profileImageUrl: data['profile_picture_url'] ?? data['profileImageUrl'], // Add profile image URL parsing
     );
   }
 

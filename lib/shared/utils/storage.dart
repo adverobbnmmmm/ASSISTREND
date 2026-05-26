@@ -36,10 +36,21 @@ class Storage {
     return prefs.getString('user_id');
   }
 
+  static Future<void> saveProfileComplete(bool isComplete) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_profile_complete', isComplete);
+  }
+
+  static Future<bool> isProfileComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('is_profile_complete') ?? false;
+  }
+
   static Future<void> clearAllTokens() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_token');
     await prefs.remove('refresh_token');
     await prefs.remove('user_id');
+    await prefs.remove('is_profile_complete');
   }
 }

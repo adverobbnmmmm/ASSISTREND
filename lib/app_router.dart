@@ -150,7 +150,8 @@ class AppRouter {
       // Get current auth status
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
-      final userId = prefs.getInt('user_id');
+      final userId = prefs.getString('user_id') ?? prefs.getInt('user_id')?.toString();
+      final isProfileComplete = prefs.getBool('is_profile_complete') ?? false;
       final isLoggedIn = token != null && userId != null;
       
       final currentPath = state.matchedLocation;
@@ -163,7 +164,7 @@ class AppRouter {
       final isOnProfileSetupPage = currentPath == '/profile-setup';
       
       // Debug logging
-      print('Router redirect - Path: $currentPath, IsLoggedIn: $isLoggedIn');
+      print('Router redirect - Path: $currentPath, IsLoggedIn: $isLoggedIn, IsProfileComplete: $isProfileComplete');
       print('Router redirect - IsOnAuthPage: $isOnAuthPage');
       print('Router redirect - IsOnOpeningPage: $isOnOpeningPage');
       print('Router redirect - IsOnProfileSetupPage: $isOnProfileSetupPage');
@@ -174,8 +175,14 @@ class AppRouter {
         return '/login';
       }
       
-      // If logged in and trying to access auth pages (but not profile setup)
-      if (isLoggedIn && isOnAuthPage) {
+      // If logged in and profile is not complete, force them to setup page
+      if (isLoggedIn && !isProfileComplete && !isOnProfileSetupPage) {
+        print('Redirecting to profile-setup from: $currentPath');
+        return '/profile-setup';
+      }
+      
+      // If logged in and profile is complete, and trying to access auth or opening pages
+      if (isLoggedIn && isProfileComplete && (isOnAuthPage || isOnOpeningPage || isOnProfileSetupPage)) {
         print('Redirecting to home from: $currentPath');
         return '/home';
       }

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_service.dart';
+import '../../../shared/utils/storage.dart';
 import '../models/profile_setup_model.dart';
 
 class ProfileSetupNotifier extends StateNotifier<ProfileSetupState> {
@@ -12,6 +13,7 @@ class ProfileSetupNotifier extends StateNotifier<ProfileSetupState> {
       final response = await ApiService.setupProfile(userId, profileData);
       
       if (response['status'] == 'success') {
+        await Storage.saveProfileComplete(true);
         state = state.copyWith(
           isLoading: false,
           isSuccess: true,

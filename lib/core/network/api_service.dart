@@ -43,6 +43,20 @@ class ApiService {
             headers: headers,
           );
           break;
+        case 'PUT':
+          response = await http.put(
+            uri,
+            headers: headers,
+            body: jsonEncode(body),
+          );
+          break;
+        case 'PATCH':
+          response = await http.patch(
+            uri,
+            headers: headers,
+            body: jsonEncode(body),
+          );
+          break;
         default:
           throw Exception('Unsupported HTTP method');
       }
@@ -385,16 +399,15 @@ class ApiService {
     }
   }
 
-  // Profile Setup Methods
   static Future<dynamic> setupProfile(String userId, dynamic profileData) async {
     final token = await Storage.getToken();
     return await _makeRequest(
-      'account/setup-profile/',
+      'v1/accounts/profile/me/',
       {
         'userId': userId,
         ...profileData.toJson(),
       },
-      'POST',
+      'PUT',
       token,
     );
   }
@@ -402,7 +415,7 @@ class ApiService {
   static Future<dynamic> getInterests() async {
     final token = await Storage.getToken();
     return await _makeRequest(
-      'account/get-interests/',
+      'v1/accounts/interests/',
       null,
       'GET',
       token,
@@ -422,9 +435,19 @@ class ApiService {
   static Future<dynamic> getUserProfile(String userId) async {
     final token = await Storage.getToken();
     return await _makeRequest(
-      'account/user-profile-detail/?userId=$userId',
+      'v1/accounts/profile/me/',
       null,
       'GET',
+      token,
+    );
+  }
+
+  static Future<dynamic> updateProfile(Map<String, dynamic> data) async {
+    final token = await Storage.getToken();
+    return await _makeRequest(
+      'v1/accounts/profile/me/',
+      data,
+      'PATCH',
       token,
     );
   }

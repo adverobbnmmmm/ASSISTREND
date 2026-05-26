@@ -23,14 +23,14 @@ class ProfileSetupModel {
 
   Map<String, dynamic> toJson() {
     return {
-      'userName': userName,
+      'display_name': userName,
       'emoji': emoji,
-      'about': about,
+      'bio': about,
       'location': location,
       'dob': dob?.toIso8601String().split('T')[0], // Format as YYYY-MM-DD
       'gender': gender,
-      'profileImageUrl': profileImageUrl,
-      'audioUrl': audioUrl,
+      'profile_picture_url': profileImageUrl,
+      'audio_intro_url': audioUrl,
       'interests': interests,
     };
   }

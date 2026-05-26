@@ -6,7 +6,8 @@ import 'package:http/http.dart' as http;
 import '../models/profile_model.dart';
 import '../../../shared/utils/storage.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../../core/network/social_api_service.dart'; // Updated import
+import '../../../core/network/api_service.dart';
+import '../../../core/network/social_api_service.dart'; // Keep for other social stuff
 import '../../../config/app_config.dart';
 
 // State for profile loading
@@ -43,8 +44,8 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     try {
       state = state.copyWith(status: ProfileStatus.loading);
 
-      // Use the SocialApiService instead of direct HTTP request
-      final data = await SocialApiService.getProfileData(userId);
+      // Use the ApiService to get the user's profile
+      final data = await ApiService.getUserProfile(userId);
       final profile = ProfileModel.fromJson(data);
       
       state = state.copyWith(
@@ -64,15 +65,22 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     String? name,
     String? about,
     String? emoji,
+    String? profileImageUrl,
+    String? audioUrl,
   }) async {
     try {
       final updateData = {
-        if (name != null) 'name': name,
-        if (about != null) 'about': about, 
+        if (name != null) 'display_name': name,
+        if (about != null) 'bio': about, 
         if (emoji != null) 'emoji': emoji,
+        if (profileImageUrl != null) 'profile_picture_url': profileImageUrl,
+        if (audioUrl != null) 'audio_intro_url': audioUrl,
       };
       
-      await SocialApiService.updateProfile(userId, updateData);
+      await ApiService.updateProfile(updateData);
+      
+      // Mark profile as complete after successful update
+      await Storage.saveProfileComplete(true);
       
       // Refresh profile data after update
       await fetchProfile(userId);
