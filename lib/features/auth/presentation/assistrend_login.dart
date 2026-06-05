@@ -17,8 +17,8 @@ class AssistrendLogin extends ConsumerStatefulWidget {
 }
 
 class _AssistrendLoginState extends ConsumerState<AssistrendLogin> {
-  final TextEditingController _emailController = TextEditingController(text: "notpotatogun@gmail.com");
-  final TextEditingController _passwordController = TextEditingController(text: "Password@123");
+  final TextEditingController _emailController = TextEditingController(text: "jefinfrancis4u@gmail.com");
+  final TextEditingController _passwordController = TextEditingController(text: "Jefin@123");
   bool _isLoading = false;
 
   @override

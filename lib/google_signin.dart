@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:assistrend/config/app_config.dart';
 
 class GoogleSignInService {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
+  static final GoogleSignIn _googleSignIn = GoogleSignIn(
   clientId: '657499594632-ota692hjv442mjfle75c35fv4noeq67b.apps.googleusercontent.com',
   scopes: ['email', 'profile'],
 );

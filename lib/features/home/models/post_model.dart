@@ -1,6 +1,6 @@
 class Post {
   final int id;
-  final int user;
+  final String user; // author UUID (string) from the backend
   final String caption;
   final String imageUrl;
   final String? audioUrl;
@@ -30,7 +30,7 @@ class Post {
   factory Post.fromJson(Map<String, dynamic> json) {
     return Post(
       id: json['id'] as int,
-      user: json['user'] as int,
+      user: json['user']?.toString() ?? '',
       username:json['username'] as String? ?? 'Anonymous',
       caption: json['caption'] as String,
       imageUrl: json['image_url'] as String,
@@ -63,7 +63,7 @@ class Post {
 
   Post copyWith({
     int? id,
-    int? user,
+    String? user,
     String? username,
     String? caption,
     String? imageUrl,

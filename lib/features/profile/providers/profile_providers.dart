@@ -98,6 +98,14 @@ final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>((re
   return ProfileNotifier();
 });
 
+// Provider for viewing ANOTHER user's profile by id (read-only).
+// Kept separate from profileProvider so it never clobbers your own profile state.
+final otherUserProfileProvider =
+    FutureProvider.family<ProfileModel, String>((ref, userId) async {
+  final data = await ApiService.getProfileById(userId);
+  return ProfileModel.fromJson(data);
+});
+
 // Provider for current user's profile
 final currentUserProfileProvider = FutureProvider<ProfileModel>((ref) async {
   final authState = ref.watch(authProvider);

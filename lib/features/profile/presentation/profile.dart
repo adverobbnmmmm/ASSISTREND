@@ -12,7 +12,10 @@ import '../../home/presentation/postbottombar.dart';
 import '../../home/services/audio_player_service.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  /// null => the logged-in user's own profile (editable).
+  /// otherwise => view that user's profile read-only.
+  final String? userId;
+  const ProfilePage({Key? key, this.userId}) : super(key: key);
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -21,23 +24,56 @@ class ProfilePage extends ConsumerStatefulWidget {
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   final List<String> tabs = ["Posts", "Liked", "Tagged"];
 
+  bool get _isOwnProfile => widget.userId == null;
+
   @override
   void initState() {
     super.initState();
     // Initialize audio player service
     AudioPlayerService.initialize();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadUserProfile();
-    });
+    // Only the own profile uses the shared profileProvider; other users are
+    // loaded read-only through otherUserProfileProvider in build().
+    if (_isOwnProfile) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadUserProfile();
+      });
+    }
   }
   @override
   Widget build(BuildContext context) {
-    final profileState = ref.watch(profileProvider);
     final selectedTabIndex = ref.watch(selectedTabIndexProvider);
-    
+
+    // Viewing another user's profile (read-only).
+    if (!_isOwnProfile) {
+      final async = ref.watch(otherUserProfileProvider(widget.userId!));
+      return Scaffold(
+        backgroundColor: const Color(0xFF0A0A0A),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF0A0A0A),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: async.when(
+          loading: () => const Center(
+              child: CircularProgressIndicator(color: Colors.purple)),
+          error: (e, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Failed to load profile: $e',
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center),
+            ),
+          ),
+          data: (profile) =>
+              _buildProfileContent(profile, selectedTabIndex, isOwnProfile: false),
+        ),
+      );
+    }
+
+    // Own profile.
+    final profileState = ref.watch(profileProvider);
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
-      
       body: _buildBody(profileState, selectedTabIndex),
     );
   }
@@ -107,24 +143,25 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ),
         );
       default:
-        return _buildProfileContent(profileState.profile, selectedTabIndex);
+        return _buildProfileContent(profileState.profile, selectedTabIndex,
+            isOwnProfile: true);
     }
   }
 
-  Widget _buildProfileContent(ProfileModel profile, int selectedTabIndex) {
+  Widget _buildProfileContent(ProfileModel profile, int selectedTabIndex,
+      {bool isOwnProfile = true}) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 30),
-          _buildProfileHeader(profile),
+          _buildProfileHeader(profile, isOwnProfile),
           const SizedBox(height: 24),
-          _buildAboutSection(profile),
+          _buildAboutSection(profile, isOwnProfile),
           const SizedBox(height: 24),
           _buildInterestsSection(profile),
           const SizedBox(height: 24),
-          _buildHighlightsSection(),
-          const SizedBox(height: 24),
+          // Highlights section hidden until backed by real data.
           _buildTabBar(selectedTabIndex),
           const SizedBox(height: 20),
           _buildSelectedTabContent(profile, selectedTabIndex),
@@ -135,7 +172,40 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       ),
     );
   }
-  Widget _buildProfileHeader(ProfileModel profile) {
+  Widget _buildMenuButton() {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, color: Colors.white),
+      color: const Color(0xFF1A1A1A),
+      padding: EdgeInsets.zero,
+      onSelected: (value) {
+        if (value == 'logout') _handleLogout();
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+          value: 'logout',
+          child: Row(
+            children: [
+              Icon(Icons.logout, color: Colors.redAccent, size: 20),
+              SizedBox(width: 12),
+              Text('Logout', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      await ref.read(authProvider.notifier).logout();
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (mounted) context.go('/');
+    } catch (e) {
+      if (mounted) context.go('/');
+    }
+  }
+
+  Widget _buildProfileHeader(ProfileModel profile, bool isOwnProfile) {
     return Container(
       padding: EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Row(
@@ -168,20 +238,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         ),
                 ),
               ),  
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+              if (isOwnProfile)
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(Icons.camera_alt, color: Colors.white, size: 16),
                   ),
-                  child: Icon(Icons.camera_alt, color: Colors.white, size: 16),
                 ),
-              ),
             ],
           ),
           SizedBox(width: 20),
@@ -233,12 +304,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           ),
           
+          if (isOwnProfile) _buildMenuButton(),
         ],
       ),
     );
   }
 
-  Widget _buildAboutSection(ProfileModel profile) {
+  Widget _buildAboutSection(ProfileModel profile, bool isOwnProfile) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -257,23 +329,25 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
               Row(
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade800.withOpacity(0.5),
-                      shape: BoxShape.circle,
+                  if (isOwnProfile) ...[
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade800.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        onPressed: () {
+                          context.pushNamed('editProfile', extra: profile);
+                        },
+                        icon: Icon(Icons.edit, color: Colors.white),
+                        iconSize: 16,
+                        padding: EdgeInsets.zero,
+                      ),
                     ),
-                    child: IconButton(
-                      onPressed: () {
-                        context.pushNamed('editProfile', extra: profile);
-                      },
-                      icon: Icon(Icons.edit, color: Colors.white),
-                      iconSize: 16,
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                  SizedBox(width: 8),
+                    SizedBox(width: 8),
+                  ],
                   Container(
                     width: 36,
                     height: 36,
@@ -313,11 +387,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ),
           SizedBox(height: 12),
           Text(
-            profile.about.isNotEmpty 
-                ? profile.about 
-                : "A dedicated Astronomy enthusiast, pursuing B-tech in ktu university at kerala. I'm curious about the mysteries that are hidden throughout the spacetime fabric and want to explore this universe.",
+            profile.about.isNotEmpty
+                ? profile.about
+                : "No bio yet. Tap edit to tell people about yourself.",
             style: TextStyle(
-              color: Colors.grey.shade300,
+              color: profile.about.isNotEmpty
+                  ? Colors.grey.shade300
+                  : Colors.grey.shade600,
               fontSize: 15,
               height: 1.5,
             ),
@@ -328,10 +404,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Widget _buildInterestsSection(ProfileModel profile) {
-    final interests = profile.interests.isNotEmpty 
-        ? profile.interests 
-        : ["Entrepreneurship", "Business", "Analytics", "Startup", "Astronomy", "Powerlifting", "Basketball"];
-    
+    final interests = profile.interests;
+
     return Container(
       margin: EdgeInsets.fromLTRB(24, 0, 24, 0),
       child: Column(
@@ -346,11 +420,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           ),
           SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 12,
-            children: interests.map((interest) => _buildInterestChip(interest)).toList(),
-          ),
+          if (interests.isEmpty)
+            Text(
+              "No interests added yet.",
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 12,
+              children: interests.map((interest) => _buildInterestChip(interest)).toList(),
+            ),
         ],
       ),
     );
@@ -528,17 +608,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   HomePost.Post _convertToHomePost(Post profilePost, ProfileModel profile) {
     return HomePost.Post(
       id: profilePost.id,
-      user: 0, // Will be filled with actual user ID if available
+      user: '', // Will be filled with actual user ID (UUID) if available
       username: profile.username,
       caption: profilePost.caption,
       imageUrl: profilePost.imageUrl,
       audioUrl: null, // Profile posts don't have audio in current model
-      category: 2, // Default to "Experience" category
+      category: profilePost.category,
       createdAt: DateTime.parse(profilePost.createdAt),
-      // Generate realistic but varied counts based on post ID for demo
-      likesCount: (profilePost.id * 7 + 50) % 500 + 10, // Generates varied counts between 10-510
-      isLiked: profilePost.id % 3 == 0, // Every 3rd post is liked for demo
-      commentsCount: (profilePost.id * 3 + 5) % 50 + 2, // Generates varied counts between 2-52
+      // Real counts from the backend
+      likesCount: profilePost.likesCount,
+      isLiked: false,
+      commentsCount: profilePost.commentsCount,
     );
   }
 

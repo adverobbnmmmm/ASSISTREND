@@ -375,16 +375,14 @@ class ApiService {
   // Get Posts Feed from Social Service
   static Future<List<dynamic>> getPostsFeed() async {
     try {
-      final userId = await Storage.getUserId();
-      String url = '${socialServiceUrl}features/getPostUserFeed';
-      if (userId != null) {
-        url += '?userId=$userId';
-      }
-      
+      final token = await Storage.getToken();
+      final url = '${socialServiceUrl}features/getPostUserFeed';
+
       final response = await http.get(
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
         },
       );
 
@@ -436,6 +434,17 @@ class ApiService {
     final token = await Storage.getToken();
     return await _makeRequest(
       'v1/accounts/profile/me/',
+      null,
+      'GET',
+      token,
+    );
+  }
+
+  // Get another user's profile by id (read-only)
+  static Future<dynamic> getProfileById(String userId) async {
+    final token = await Storage.getToken();
+    return await _makeRequest(
+      'v1/accounts/profile/$userId/',
       null,
       'GET',
       token,

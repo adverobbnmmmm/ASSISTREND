@@ -3,18 +3,25 @@ import 'package:http/http.dart' as http;
 import '../models/comment_model.dart';
 
 import 'package:assistrend/config/app_config.dart';
+import 'package:assistrend/shared/utils/storage.dart';
 
 class SocialService {
   static final String baseUrl = '${AppConfig.socialServerUrl}/api/social-service/features/';
+
+  static Future<Map<String, String>> _headers() async {
+    final token = await Storage.getToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
 
   // Like a post
   static Future<bool> likePost(int postId, String userId) async {
     try {
       final response = await http.get(
         Uri.parse('${baseUrl}addLike/?postId=$postId&userId=$userId'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: await _headers(),
       );
 
       if (response.statusCode == 200) {
@@ -32,9 +39,7 @@ class SocialService {
     try {
       final response = await http.post(
         Uri.parse('${baseUrl}removeLike/'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: await _headers(),
         body: jsonEncode({
           'postId': postId,
           'userId': userId,
@@ -58,9 +63,7 @@ class SocialService {
       
       final response = await http.post(
         Uri.parse('${baseUrl}addComment/'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: await _headers(),
         body: jsonEncode({
           'postId': postId,
           'userId': userId,
@@ -89,9 +92,7 @@ class SocialService {
       
       final response = await http.get(
         Uri.parse('${baseUrl}getComment/?postId=$postId'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: await _headers(),
       );
 
       print('Get comments response: ${response.statusCode}');

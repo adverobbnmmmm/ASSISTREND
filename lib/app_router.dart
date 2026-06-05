@@ -17,6 +17,11 @@ import 'features/profile/presentation/profile_setup_screen.dart';
 import 'features/upload/presentation/upload.dart';
 import 'features/search/presentation/search_page.dart';
 import 'features/home/presentation/comments_test_page.dart';
+import 'features/messaging/models/chat_models.dart';
+import 'features/messaging/presentation/messages_screen.dart';
+import 'features/messaging/presentation/chat_screen.dart';
+import 'features/messaging/presentation/new_chat_screen.dart';
+import 'features/messaging/presentation/create_group_screen.dart';
 import 'debug_logout.dart';
 import 'simple_logout_test.dart';
 
@@ -127,6 +132,37 @@ class AppRouter {
         path: '/more-posts',
         name: 'morePosts',
         builder: (context, state) => const SeeMorePostsPage(),
+      ),
+
+      // Another user's profile (read-only), opened e.g. from search
+      GoRoute(
+        path: '/user/:id',
+        name: 'userProfile',
+        builder: (context, state) =>
+            ProfilePage(userId: state.pathParameters['id']),
+      ),
+
+      // Messaging
+      GoRoute(
+        path: '/messages',
+        name: 'messages',
+        builder: (context, state) => const MessagesScreen(),
+      ),
+      GoRoute(
+        path: '/chat',
+        name: 'chat',
+        builder: (context, state) =>
+            ChatScreen(conversation: state.extra as Conversation),
+      ),
+      GoRoute(
+        path: '/new-chat',
+        name: 'newChat',
+        builder: (context, state) => const NewChatScreen(),
+      ),
+      GoRoute(
+        path: '/create-group',
+        name: 'createGroup',
+        builder: (context, state) => const CreateGroupScreen(),
       ),
       GoRoute(
         path: '/edit-profile',

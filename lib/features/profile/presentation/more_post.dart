@@ -140,16 +140,16 @@ class _SeeMorePostsPageState extends ConsumerState<SeeMorePostsPage> {
   HomePost.Post _convertToHomePost(Post profilePost, ProfileModel profile) {
     return HomePost.Post(
       id: profilePost.id,
-      user: 0, // Will be filled with actual user ID if available
+      user: '', // Will be filled with actual user ID (UUID) if available
       username: profile.username,
       caption: profilePost.caption,
       imageUrl: profilePost.imageUrl,
       audioUrl: null, // Profile posts don't have audio in current model
-      category: 1, // Default category, you can modify this
+      category: profilePost.category,
       createdAt: DateTime.parse(profilePost.createdAt),
-      likesCount: 0, // Default for now
-      isLiked: false, // Default for now
-      commentsCount: 0, // Default for now
+      likesCount: profilePost.likesCount, // Real count from backend
+      isLiked: false,
+      commentsCount: profilePost.commentsCount, // Real count from backend
     );
   }
 

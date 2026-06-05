@@ -119,12 +119,18 @@ class Post {
   final String caption;
   final String imageUrl;
   final String createdAt;
+  final int category;
+  final int likesCount;
+  final int commentsCount;
 
   Post({
     required this.id,
     required this.caption,
     required this.imageUrl,
     required this.createdAt,
+    this.category = 0,
+    this.likesCount = 0,
+    this.commentsCount = 0,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -133,6 +139,9 @@ class Post {
       caption: json['caption'] ?? '',
       imageUrl: json['image_url'] ?? '',
       createdAt: json['created_at'] ?? '',
+      category: json['category'] ?? 0,
+      likesCount: json['likes_count'] ?? 0,
+      commentsCount: json['comments_count'] ?? 0,
     );
   }
 }

@@ -60,10 +60,10 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Get user info from auth state
-    final authState = ref.watch(authProvider);
-    final userId = authState.userId;
-    
+    // Get user info from auth state (only used by the commented-out debug AppBar)
+    // final authState = ref.watch(authProvider);
+    // final userId = authState.userId;
+
     // Watch posts state
     final postsState = ref.watch(postsProvider);
     
@@ -76,6 +76,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     
     return SafeArea(
         child: Scaffold(
+            // Debug top bar commented out — the original "Welcome" bar
+            // (AppBarwidget, below in the body) is used instead.
+            /*
             appBar: AppBar(
               backgroundColor: const Color(0xff181a1c),
               title: const Text('Assistrend'),
@@ -112,6 +115,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ],
             ),
+            */
             body: Stack(
               children: [
                 Column(children: [

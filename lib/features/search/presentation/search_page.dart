@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:assistrend/features/home/main/debouncer.dart';
 import 'package:assistrend/features/search/providers/search_providers.dart';
 import 'package:assistrend/features/search/models/search_result_model.dart';
@@ -215,9 +216,10 @@ class _SearchPageState extends ConsumerState<SearchPage> with SingleTickerProvid
       final usersAsyncValue = ref.watch(searchResultsProvider('profile:' + searchQuery));
       return _buildResultsListFromProvider(usersAsyncValue, 'profile');
     } else if (_selectedTabIndex == 2) {
-      // Posts
+      // Posts (the 'post:' prefix already restricts to posts, so show all
+      // post result types: photo, video and text).
       final postsAsyncValue = ref.watch(searchResultsProvider('post:' + searchQuery));
-      return _buildResultsListFromProvider(postsAsyncValue, 'photo');
+      return _buildResultsListFromProvider(postsAsyncValue, null);
     } else {
       // All
       final allAsyncValue = ref.watch(searchResultsProvider(searchQuery));
@@ -244,7 +246,7 @@ class _SearchPageState extends ConsumerState<SearchPage> with SingleTickerProvid
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stackTrace) => Center(
-        child: Text('Error: {error.toString()}', style: const TextStyle(color: Colors.red)),
+        child: Text('Error: ${error.toString()}', style: const TextStyle(color: Colors.red)),
       ),
     );
   }
@@ -256,7 +258,8 @@ class _SearchPageState extends ConsumerState<SearchPage> with SingleTickerProvid
         // Handle navigation based on item type
         switch (item.type) {
           case 'profile':
-            // Navigate to profile page
+            // Open that user's profile (item.id is the user's id)
+            context.pushNamed('userProfile', pathParameters: {'id': item.id});
             break;
           case 'photo':
           case 'video':

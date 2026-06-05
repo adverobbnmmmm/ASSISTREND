@@ -425,14 +425,15 @@ class UploadNotifier extends StateNotifier<UploadState> {
       }
       
       final url = AppConfig.socialServerUrl;
-      
-      // Prepare request body
+      final token = await Storage.getToken();
+
+      // Prepare request body (the backend takes the author from the JWT;
+      // userId is no longer needed/trusted).
       final Map<String, dynamic> requestBody = {
-        'userId': await Storage.getUserId(),
         'caption': state.caption,
         'category': state.category,
       };
-      
+
       // Add URLs based on what was uploaded
       if (mediaUrl != null) {
         requestBody['imageUrl'] = mediaUrl;
@@ -440,11 +441,12 @@ class UploadNotifier extends StateNotifier<UploadState> {
       if (audioUrl != null) {
         requestBody['audioUrl'] = audioUrl;
       }
-      
+
       await http.post(
         Uri.parse('${url}/api/social-service/features/uploadPost/'),
         headers: <String, String>{
           'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
         },
         body: jsonEncode(requestBody),
       );
