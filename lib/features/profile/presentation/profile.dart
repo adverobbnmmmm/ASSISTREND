@@ -23,6 +23,7 @@ class ProfilePage extends ConsumerStatefulWidget {
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   final List<String> tabs = ["Posts", "Liked", "Tagged"];
+  bool _isMenuOpen = false;
 
   bool get _isOwnProfile => widget.userId == null;
 
@@ -67,6 +68,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           data: (profile) =>
               _buildProfileContent(profile, selectedTabIndex, isOwnProfile: false),
         ),
+        floatingActionButton: _buildSpeedDial(),
       );
     }
 
@@ -75,6 +77,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
       body: _buildBody(profileState, selectedTabIndex),
+      floatingActionButton: _buildSpeedDial(),
     );
   }
 
@@ -161,7 +164,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           const SizedBox(height: 24),
           _buildInterestsSection(profile),
           const SizedBox(height: 24),
-          // Highlights section hidden until backed by real data.
+          _buildHighlightsSection(profile),
+          const SizedBox(height: 24),
           _buildTabBar(selectedTabIndex),
           const SizedBox(height: 20),
           _buildSelectedTabContent(profile, selectedTabIndex),
@@ -455,76 +459,66 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  Widget _buildHighlightsSection() {
+  Widget _buildHighlightsSection(ProfileModel profile) {
+    if (profile.highlightQuestion == null || profile.highlightQuestion!.isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Container(
-      margin: EdgeInsets.fromLTRB(24, 24, 24, 0),
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Highlights",
+          const Text(
+            "Highlight Question",
             style: TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildHighlightCard(
-                  "Why do you think kids are naturally curious about science, but many of us lose that spark as we grow up?",
-                  true,
-                ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E3C72), Color(0xFF2A5298)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _buildHighlightCard(
-                  "Anu, while you're excelling academically, how do you balance that with taking a hands-",
-                  false,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHighlightCard(String text, bool isFirst) {
-    return Container(
-      height: 160,
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isFirst ? Color(0xFF1A237E) : Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(16),
-        border: isFirst ? null : Border.all(color: Colors.grey.shade700),
-      ),
-      child: Column(
-        children: [
-          if (isFirst) ...[
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.purple,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.psychology, color: Colors.white, size: 20),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                )
+              ]
             ),
-            SizedBox(height: 12),
-          ],
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                height: 1.4,
-              ),
-              maxLines: isFirst ? 4 : 5,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.help_outline, color: Colors.white70, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      "Ask me anything",
+                      style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  profile.highlightQuestion!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -947,6 +941,124 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildSpeedDial() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (_isMenuOpen) ...[
+          // Option 1: Spark
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isMenuOpen = false;
+              });
+              _showOptionSelected('Spark');
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.purple, Colors.pink],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.bolt, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text(
+                    'Spark',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Option 2: Arena
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isMenuOpen = false;
+              });
+              _showOptionSelected('Arena');
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.blue, Colors.teal],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.sports_esports, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text(
+                    'Arena',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        // Main Toggle Button
+        FloatingActionButton(
+          onPressed: () {
+            setState(() {
+              _isMenuOpen = !_isMenuOpen;
+            });
+          },
+          backgroundColor: Colors.blueAccent,
+          mini: true,
+          child: AnimatedRotation(
+            turns: _isMenuOpen ? 0.125 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showOptionSelected(String option) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$option selected'),
+        duration: const Duration(seconds: 1),
+        backgroundColor: Colors.blueAccent,
       ),
     );
   }

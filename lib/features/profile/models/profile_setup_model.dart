@@ -7,7 +7,8 @@ class ProfileSetupModel {
   final String? gender;
   final String? profileImageUrl;
   final String? audioUrl;
-  final List<String> interests;
+  final String? highlightQuestion;
+  final List<int> interests;
 
   ProfileSetupModel({
     required this.userName,
@@ -18,6 +19,7 @@ class ProfileSetupModel {
     this.gender,
     this.profileImageUrl,
     this.audioUrl,
+    this.highlightQuestion,
     this.interests = const [],
   });
 
@@ -31,6 +33,7 @@ class ProfileSetupModel {
       'gender': gender,
       'profile_picture_url': profileImageUrl,
       'audio_intro_url': audioUrl,
+      'highlight_question': highlightQuestion,
       'interests': interests,
     };
   }
@@ -45,24 +48,48 @@ class ProfileSetupModel {
       gender: json['gender'],
       profileImageUrl: json['profileImageUrl'],
       audioUrl: json['audioUrl'],
-      interests: List<String>.from(json['interests'] ?? []),
+      highlightQuestion: json['highlight_question'] ?? json['highlightQuestion'],
+      interests: List<int>.from(json['interests'] ?? []),
     );
   }
 }
 
-class Interest {
+class InterestSubcategory {
   final int id;
-  final String interestName;
+  final String name;
 
-  Interest({
+  InterestSubcategory({
     required this.id,
-    required this.interestName,
+    required this.name,
   });
 
-  factory Interest.fromJson(Map<String, dynamic> json) {
-    return Interest(
+  factory InterestSubcategory.fromJson(Map<String, dynamic> json) {
+    return InterestSubcategory(
       id: json['id'],
-      interestName: json['interestName'],
+      name: json['name'] ?? '',
+    );
+  }
+}
+
+class InterestCategory {
+  final int id;
+  final String name;
+  final List<InterestSubcategory> subcategories;
+
+  InterestCategory({
+    required this.id,
+    required this.name,
+    required this.subcategories,
+  });
+
+  factory InterestCategory.fromJson(Map<String, dynamic> json) {
+    return InterestCategory(
+      id: json['id'],
+      name: json['name'] ?? '',
+      subcategories: (json['subcategories'] as List<dynamic>?)
+              ?.map((sub) => InterestSubcategory.fromJson(sub))
+              .toList() ??
+          [],
     );
   }
 }
@@ -71,7 +98,7 @@ class ProfileSetupState {
   final bool isLoading;
   final bool isSuccess;
   final String? errorMessage;
-  final List<Interest> interests;
+  final List<InterestCategory> interests;
 
   ProfileSetupState({
     this.isLoading = false,
@@ -84,7 +111,7 @@ class ProfileSetupState {
     bool? isLoading,
     bool? isSuccess,
     String? errorMessage,
-    List<Interest>? interests,
+    List<InterestCategory>? interests,
   }) {
     return ProfileSetupState(
       isLoading: isLoading ?? this.isLoading,

@@ -67,6 +67,8 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     String? emoji,
     String? profileImageUrl,
     String? audioUrl,
+    String? highlightQuestion,
+    List<int>? interests,
   }) async {
     try {
       final updateData = {
@@ -75,6 +77,8 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         if (emoji != null) 'emoji': emoji,
         if (profileImageUrl != null) 'profile_picture_url': profileImageUrl,
         if (audioUrl != null) 'audio_intro_url': audioUrl,
+        if (highlightQuestion != null) 'highlight_question': highlightQuestion,
+        if (interests != null) 'interests': interests,
       };
       
       await ApiService.updateProfile(updateData);

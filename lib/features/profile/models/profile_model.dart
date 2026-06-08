@@ -15,6 +15,7 @@ class ProfileModel {
   final List<String> interests;
   final String? audioUrl; // Add profile audio URL
   final String? profileImageUrl; // Add profile image URL
+  final String? highlightQuestion;
 
   ProfileModel({
     required this.name,
@@ -31,12 +32,32 @@ class ProfileModel {
     required this.interests,
     this.audioUrl, // Add this parameter
     this.profileImageUrl, // Add this parameter
+    this.highlightQuestion,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
     // Check if wrapped in data object
     final data = json['data'] ?? json;
     
+    // Check interests parsing: could be a list of interest_detail maps, or raw strings
+    List<String> parsedInterests = [];
+    if (data['interests_detail'] != null) {
+      parsedInterests = (data['interests_detail'] as List<dynamic>)
+          .map((interest) => (interest['name'] ?? '') as String)
+          .where((name) => name.isNotEmpty)
+          .toList();
+    } else if (data['interests'] != null) {
+      parsedInterests = (data['interests'] as List<dynamic>)
+          .map((interest) {
+            if (interest is Map) {
+              return (interest['interestId__interestName'] ?? interest['name'] ?? '') as String;
+            }
+            return interest.toString();
+          })
+          .where((name) => name.isNotEmpty)
+          .toList();
+    }
+
     return ProfileModel(
       name: data['display_name'] ?? data['name'] ?? '',
       username: data['username'] ?? '',
@@ -67,12 +88,10 @@ class ProfileModel {
               ?.map((social) => SocialLink.fromJson(social))
               .toList() ??
           [],
-      interests: (data['interests'] as List<dynamic>?)
-              ?.map((interest) => interest['interestId__interestName'] as String)
-              .toList() ??
-          [],
+      interests: parsedInterests,
       audioUrl: data['audio_intro_url'] ?? data['audioUrl'], // Add audio URL parsing
       profileImageUrl: data['profile_picture_url'] ?? data['profileImageUrl'], // Add profile image URL parsing
+      highlightQuestion: data['highlight_question'] ?? data['highlightQuestion'],
     );
   }
 
@@ -91,8 +110,9 @@ class ProfileModel {
       taggedPosts: [],
       socials: [],
       interests: [],
-      audioUrl: null, // Add this
-      profileImageUrl: null, // Add this
+      audioUrl: null,
+      profileImageUrl: null,
+      highlightQuestion: null,
     );
   }
 }

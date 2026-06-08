@@ -38,7 +38,7 @@ class ProfileSetupNotifier extends StateNotifier<ProfileSetupState> {
       
       if (response['status'] == 'success') {
         final interests = (response['interests'] as List)
-            .map((json) => Interest.fromJson(json))
+            .map((json) => InterestCategory.fromJson(json))
             .toList();
         
         state = state.copyWith(interests: interests);

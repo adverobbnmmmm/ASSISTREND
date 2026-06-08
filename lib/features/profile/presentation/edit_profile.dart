@@ -20,6 +20,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   late TextEditingController nameController;
   late TextEditingController aboutController;
   late TextEditingController emojiController;
+  late TextEditingController highlightQuestionController;
   List<String> interests = [];
   bool isLoading = false;
   String? errorMessage;
@@ -32,6 +33,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     nameController = TextEditingController(text: widget.profile.name);
     aboutController = TextEditingController(text: widget.profile.about);
     emojiController = TextEditingController(text: widget.profile.emoji);
+    highlightQuestionController = TextEditingController(text: widget.profile.highlightQuestion);
     interests = List.from(widget.profile.interests);
   }
 
@@ -40,6 +42,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     nameController.dispose();
     aboutController.dispose();
     emojiController.dispose();
+    highlightQuestionController.dispose();
     super.dispose();
   }
 
@@ -148,6 +151,40 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     } catch (e) {
       setState(() {
         errorMessage = 'Failed to update emoji: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateHighlightQuestion() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+      successMessage = null;
+    });
+
+    try {
+      final authState = ref.read(authProvider);
+      final userId = authState.userId;
+      
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await ref.read(profileProvider.notifier).updateProfile(
+        userId,
+        highlightQuestion: highlightQuestionController.text.trim(),
+      );
+
+      setState(() {
+        successMessage = 'Highlight question updated successfully';
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to update highlight question: ${e.toString()}';
       });
     } finally {
       setState(() {
@@ -408,6 +445,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   const SizedBox(height: 24),
                   _buildAboutSection(),
                   const SizedBox(height: 24),
+                  _buildHighlightQuestionSection(),
+                  const SizedBox(height: 24),
                   _buildAudioSection(),
                   const SizedBox(height: 24),
                   _buildPhotoSection(),
@@ -541,6 +580,37 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         const SizedBox(height: 16),
         Center(
           child: _buildGradientBorderButton('Update About', _updateAbout),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHighlightQuestionSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Highlight Question'),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade800, width: 1),
+          ),
+          child: TextField(
+            controller: highlightQuestionController,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Type a question for others to answer...',
+              hintStyle: TextStyle(color: Colors.grey),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: _buildGradientBorderButton('Update Highlight Question', _updateHighlightQuestion),
         ),
       ],
     );

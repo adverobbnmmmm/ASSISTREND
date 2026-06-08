@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../../core/network/api_service.dart';
 import '../../../shared/utils/storage.dart';
 import '../models/profile_setup_model.dart';
 import '../providers/profile_setup_provider.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
+  const ProfileSetupScreen({Key? key}) : super(key: key);
+
   @override
   _ProfileSetupScreenState createState() => _ProfileSetupScreenState();
 }
@@ -18,50 +19,29 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _aboutController = TextEditingController();
   final _locationController = TextEditingController();
   final _emojiController = TextEditingController();
+  final _highlightQuestionController = TextEditingController();
   
   String _selectedGender = '';
   DateTime? _selectedDate;
   String? _profileImageUrl;
   String? _audioUrl;
-  List<String> _selectedInterests = [];
-  List<String> _availableInterests = [];
+  final List<int> _selectedInterestIds = [];
   bool _isLoading = false;
 
   final List<String> _genders = ['Male', 'Female', 'Other'];
-  final List<String> _commonInterests = [
-    'Technology', 'Sports', 'Music', 'Movies', 'Books', 'Travel', 'Food', 
-    'Art', 'Photography', 'Gaming', 'Fitness', 'Fashion', 'Science', 
-    'Nature', 'Dancing', 'Cooking', 'Writing', 'Languages', 'History', 'Politics'
-  ];
 
   @override
   void initState() {
     super.initState();
-    _loadInterests();
-  }
-
-  Future<void> _loadInterests() async {
-    try {
-      final response = await ApiService.getInterests();
-      if (response['status'] == 'success') {
-        setState(() {
-          _availableInterests = List<String>.from(
-            response['interests'].map((interest) => interest['interestName'])
-          );
-        });
-      }
-    } catch (e) {
-      // Use common interests if API fails
-      setState(() {
-        _availableInterests = _commonInterests;
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(profileSetupProvider.notifier).loadInterests();
+    });
   }
 
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().subtract(Duration(days: 365 * 18)),
+      initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
       builder: (context, child) {
@@ -93,8 +73,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       );
       
       if (result != null) {
-        // In a real app, you would upload the file to a server
-        // For now, we'll just store the path
         setState(() {
           _profileImageUrl = result.files.first.path;
         });
@@ -114,15 +92,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       );
       
       if (result != null) {
-        // Store the local path for now - in a full implementation,
-        // you would upload this to Cloudinary and get the URL
         setState(() {
           _audioUrl = result.files.first.path;
         });
         
-        // Optional: Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Audio file selected successfully')),
+          const SnackBar(content: Text('Audio file selected successfully')),
         );
       }
     } catch (e) {
@@ -132,16 +107,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     }
   }
 
-  void _toggleInterest(String interest) {
-    setState(() {
-      if (_selectedInterests.contains(interest)) {
-        _selectedInterests.remove(interest);
-      } else {
-        _selectedInterests.add(interest);
-      }
-    });
-  }
-
   Future<void> _setupProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -149,7 +114,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
     if (_userNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Username is required')),
+        const SnackBar(content: Text('Username is required')),
       );
       return;
     }
@@ -173,35 +138,42 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         gender: _selectedGender.isEmpty ? null : _selectedGender,
         profileImageUrl: _profileImageUrl,
         audioUrl: _audioUrl,
-        interests: _selectedInterests,
+        highlightQuestion: _highlightQuestionController.text.trim(),
+        interests: _selectedInterestIds,
       );
 
       await ref.read(profileSetupProvider.notifier).setupProfile(userId.toString(), profileData);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Profile setup completed successfully!')),
-      );
-
-      // Navigate to home screen
-      context.go('/home');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile setup completed successfully!')),
+        );
+        context.go('/home');
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error setting up profile: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error setting up profile: $e')),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final setupState = ref.watch(profileSetupProvider);
+    
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: Text(
+        title: const Text(
           'Complete Your Profile',
           style: TextStyle(color: Colors.white),
         ),
@@ -210,11 +182,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               
               // Profile Picture Section
               Center(
@@ -227,7 +199,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                           ? NetworkImage(_profileImageUrl!) 
                           : null,
                       child: _profileImageUrl == null 
-                          ? Icon(Icons.person, size: 50, color: Colors.white)
+                          ? const Icon(Icons.person, size: 50, color: Colors.white)
                           : null,
                     ),
                     Positioned(
@@ -235,7 +207,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       right: 0,
                       child: GestureDetector(
                         onTap: _pickProfileImage,
-                        child: CircleAvatar(
+                        child: const CircleAvatar(
                           radius: 18,
                           backgroundColor: Colors.blueAccent,
                           child: Icon(Icons.camera_alt, size: 16, color: Colors.white),
@@ -245,7 +217,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   ],
                 ),
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
 
               // Username Field
               _buildTextField(
@@ -259,7 +231,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Emoji Field
               _buildTextField(
@@ -267,7 +239,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 label: 'Emoji',
                 hint: 'Choose an emoji that represents you',
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // About Field
               _buildTextField(
@@ -276,7 +248,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 hint: 'Tell us about yourself',
                 maxLines: 3,
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Location Field
               _buildTextField(
@@ -284,14 +256,22 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 label: 'Location',
                 hint: 'Where are you from?',
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
+
+              // Highlight Question Field
+              _buildTextField(
+                controller: _highlightQuestionController,
+                label: 'Highlight Question',
+                hint: 'Type a question for others to answer...',
+              ),
+              const SizedBox(height: 20),
 
               // Date of Birth
               GestureDetector(
                 onTap: _selectDate,
                 child: Container(
                   width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+                  padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey[600]!),
                     borderRadius: BorderRadius.circular(8),
@@ -308,24 +288,24 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                           fontSize: 16,
                         ),
                       ),
-                      Icon(Icons.calendar_today, color: Colors.grey),
+                      const Icon(Icons.calendar_today, color: Colors.grey),
                     ],
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Gender Selection
-              Text(
+              const Text(
                 'Gender',
                 style: TextStyle(color: Colors.white, fontSize: 16),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Row(
                 children: _genders.map((gender) {
                   return Expanded(
                     child: Padding(
-                      padding: EdgeInsets.only(right: 10),
+                      padding: const EdgeInsets.only(right: 10),
                       child: GestureDetector(
                         onTap: () {
                           setState(() {
@@ -333,7 +313,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                           });
                         },
                         child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
                             border: Border.all(
                               color: _selectedGender == gender 
@@ -342,8 +322,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                             ),
                             borderRadius: BorderRadius.circular(8),
                             color: _selectedGender == gender 
-                                ? Colors.blueAccent.withOpacity(0.1) 
-                                : Colors.transparent,
+                                  ? Colors.blueAccent.withOpacity(0.1) 
+                                  : Colors.transparent,
                           ),
                           child: Text(
                             gender,
@@ -360,12 +340,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   );
                 }).toList(),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Audio Introduction
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(15),
+                padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey[600]!),
                   borderRadius: BorderRadius.circular(8),
@@ -373,21 +353,21 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Audio Introduction',
                       style: TextStyle(color: Colors.white, fontSize: 16),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     if (_audioUrl != null) ...[
-                      Text(
+                      const Text(
                         'Audio file selected',
                         style: TextStyle(color: Colors.green),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                     ],
                     ElevatedButton.icon(
                       onPressed: _pickAudioFile,
-                      icon: Icon(Icons.mic),
+                      icon: const Icon(Icons.mic),
                       label: Text(_audioUrl == null ? 'Add Audio' : 'Change Audio'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blueAccent,
@@ -397,44 +377,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   ],
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-              // Interests Selection
-              Text(
-                'Interests',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _availableInterests.map((interest) {
-                  final isSelected = _selectedInterests.contains(interest);
-                  return GestureDetector(
-                    onTap: () => _toggleInterest(interest),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: isSelected ? Colors.blueAccent : Colors.grey[600]!,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        color: isSelected 
-                            ? Colors.blueAccent.withOpacity(0.1) 
-                            : Colors.transparent,
-                      ),
-                      child: Text(
-                        interest,
-                        style: TextStyle(
-                          color: isSelected ? Colors.blueAccent : Colors.white,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              SizedBox(height: 30),
+              // Interests Selection (Spotify-style)
+              _buildInterestsSection(setupState.interests),
+              const SizedBox(height: 30),
 
               // Setup Button
               SizedBox(
@@ -449,8 +396,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                     ),
                   ),
                   child: _isLoading
-                      ? CircularProgressIndicator(color: Colors.white)
-                      : Text(
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
                           'Complete Setup',
                           style: TextStyle(
                             color: Colors.white,
@@ -460,7 +407,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                         ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Skip Button
               Center(
@@ -468,7 +415,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   onPressed: () {
                     context.go('/home');
                   },
-                  child: Text(
+                  child: const Text(
                     'Skip for now',
                     style: TextStyle(
                       color: Colors.grey,
@@ -484,6 +431,312 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     );
   }
 
+  Widget _buildInterestsSection(List<InterestCategory> categories) {
+    if (categories.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Interests',
+            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          const Center(
+            child: CircularProgressIndicator(color: Colors.blueAccent),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Interests',
+          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Select categories to choose your sub-interests (Spotify-style)',
+          style: TextStyle(color: Colors.grey[400], fontSize: 12),
+        ),
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.5,
+          ),
+          itemCount: categories.length,
+          itemBuilder: (context, index) {
+            final category = categories[index];
+            final selectedCount = category.subcategories
+                .where((sub) => _selectedInterestIds.contains(sub.id))
+                .length;
+
+            return _buildCategoryCard(category, selectedCount);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryCard(InterestCategory category, int selectedCount) {
+    Gradient cardGradient;
+    IconData categoryIcon;
+
+    if (category.name.toLowerCase().contains('sport')) {
+      cardGradient = const LinearGradient(
+        colors: [Color(0xFF1E3C72), Color(0xFF2A5298)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+      categoryIcon = Icons.sports_soccer;
+    } else if (category.name.toLowerCase().contains('music')) {
+      cardGradient = const LinearGradient(
+        colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+      categoryIcon = Icons.music_note;
+    } else if (category.name.toLowerCase().contains('show') || category.name.toLowerCase().contains('movie')) {
+      cardGradient = const LinearGradient(
+        colors: [Color(0xFFED213A), Color(0xFF93291E)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+      categoryIcon = Icons.movie;
+    } else if (category.name.toLowerCase().contains('tech') || category.name.toLowerCase().contains('code')) {
+      cardGradient = const LinearGradient(
+        colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+      categoryIcon = Icons.computer;
+    } else if (category.name.toLowerCase().contains('travel') || category.name.toLowerCase().contains('hike')) {
+      cardGradient = const LinearGradient(
+        colors: [Color(0xFFF12711), Color(0xFFF5AF19)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+      categoryIcon = Icons.flight;
+    } else {
+      cardGradient = const LinearGradient(
+        colors: [Color(0xFF373B44), Color(0xFF4286F4)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+      categoryIcon = Icons.interests;
+    }
+
+    return GestureDetector(
+      onTap: () => _showSubcategoriesSheet(category),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: cardGradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -10,
+              bottom: -10,
+              child: Icon(
+                categoryIcon,
+                size: 64,
+                color: Colors.white.withOpacity(0.15),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  category.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: selectedCount > 0
+                        ? Colors.white.withOpacity(0.3)
+                        : Colors.black.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    selectedCount > 0
+                        ? '$selectedCount selected'
+                        : 'Explore',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: selectedCount > 0
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSubcategoriesSheet(InterestCategory category) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF121212),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[600],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    category.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Choose related interests you like',
+                    style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                  ),
+                  const SizedBox(height: 20),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: category.subcategories.map((sub) {
+                          final isSelected = _selectedInterestIds.contains(sub.id);
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedInterestIds.remove(sub.id);
+                                } else {
+                                  _selectedInterestIds.add(sub.id);
+                                }
+                              });
+                              setModalState(() {});
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Colors.blueAccent.withOpacity(0.2)
+                                    : const Color(0xFF282828),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? Colors.blueAccent
+                                      : Colors.transparent,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isSelected) ...[
+                                    const Icon(
+                                      Icons.check,
+                                      color: Colors.blueAccent,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ],
+                                  Text(
+                                    sub.name,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.blueAccent
+                                          : Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                      ),
+                      child: const Text(
+                        'Done',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -494,26 +747,26 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
-      style: TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: TextStyle(color: Colors.grey),
+        labelStyle: const TextStyle(color: Colors.grey),
         hintStyle: TextStyle(color: Colors.grey[600]),
         enabledBorder: OutlineInputBorder(
           borderSide: BorderSide(color: Colors.grey[600]!),
           borderRadius: BorderRadius.circular(8),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.blueAccent),
+          borderSide: const BorderSide(color: Colors.blueAccent),
           borderRadius: BorderRadius.circular(8),
         ),
         errorBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.red),
+          borderSide: const BorderSide(color: Colors.red),
           borderRadius: BorderRadius.circular(8),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.red),
+          borderSide: const BorderSide(color: Colors.red),
           borderRadius: BorderRadius.circular(8),
         ),
       ),
@@ -527,6 +780,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     _aboutController.dispose();
     _locationController.dispose();
     _emojiController.dispose();
+    _highlightQuestionController.dispose();
     super.dispose();
   }
 }
