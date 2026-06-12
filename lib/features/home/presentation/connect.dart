@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:assistrend/features/profile/providers/profile_providers.dart';
+import 'package:assistrend/features/profile/models/profile_model.dart';
+import 'package:assistrend/features/profile/presentation/edit_profile.dart';
+import 'package:assistrend/features/auth/providers/auth_provider.dart';
 import 'chat_page.dart';
 import 'spark_welcome_page.dart';
 
-class ConnectButton extends StatefulWidget {
+class ConnectButton extends ConsumerStatefulWidget {
   const ConnectButton({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
-  _ConnectButtonState createState() => _ConnectButtonState();
+  ConsumerState<ConnectButton> createState() => _ConnectButtonState();
 }
 
-class _ConnectButtonState extends State<ConnectButton>
+class _ConnectButtonState extends ConsumerState<ConnectButton>
     with SingleTickerProviderStateMixin {
   late AnimationController animationController;
   late Animation degOneTranslationAnimation,
@@ -72,8 +76,100 @@ class _ConnectButtonState extends State<ConnectButton>
     });
   }
 
+  void _showIncompleteProfileDialog(BuildContext context, double completion, ProfileModel profile) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161B22),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Colors.white12, width: 1),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 28),
+            SizedBox(width: 8),
+            Text(
+              'Profile Incomplete',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'To access Connect features (Arena & Spark), your profile must be at least 40% complete.',
+              style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: completion,
+                backgroundColor: Colors.white10,
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.amber),
+                minHeight: 8,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Current Completeness: ${(completion * 100).toInt()}% / 40%',
+              style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1D5EFF),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => EditProfilePage(profile: profile)),
+              );
+            },
+            child: const Text('Complete Profile', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final userId = authState.userId;
+    
+    // Fetch profile if not loaded yet
+    if (userId != null && ref.read(profileProvider).status == ProfileStatus.initial) {
+      Future.microtask(() {
+        ref.read(profileProvider.notifier).fetchProfile(userId);
+      });
+    }
+
+    final profile = ref.watch(profileProvider).profile;
+    
+    // Calculate profile completion percentage
+    double completion = 0.0;
+    if (profile.name.isNotEmpty) completion += 0.20;
+    if (profile.username.isNotEmpty) completion += 0.20;
+    if (profile.emoji.isNotEmpty) completion += 0.10;
+    if (profile.about.isNotEmpty) completion += 0.20;
+    if (profile.profileImageUrl != null && profile.profileImageUrl!.isNotEmpty) completion += 0.15;
+    if (profile.audioUrl != null && profile.audioUrl!.isNotEmpty) completion += 0.10;
+    if (profile.interests.isNotEmpty) completion += 0.05;
+
+    final isProfileCompleteEnough = completion >= 0.40;
+
     Size size = MediaQuery.of(context).size;
     return SizedBox(
       width: size.width,
@@ -141,6 +237,10 @@ class _ConnectButtonState extends State<ConnectButton>
                       height: 80,
                       text: 'Connect',
                       onClick: () {
+                        if (!isProfileCompleteEnough) {
+                          _showIncompleteProfileDialog(context, completion, profile);
+                          return;
+                        }
                         if (animationController.isCompleted) {
                           animationController.reverse();
                         } else {

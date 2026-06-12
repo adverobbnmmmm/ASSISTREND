@@ -62,6 +62,29 @@ class ApiService {
       }
 
       print('DEBUG API: Response status: ${response.statusCode}');
+
+      if (response.statusCode == 401 &&
+          !endpoint.contains('refresh_token') &&
+          !endpoint.contains('login')) {
+        // Attempt automatic token refresh
+        final refreshToken = await Storage.getRefreshToken();
+        if (refreshToken != null) {
+          try {
+            print('DEBUG API: Access token expired (401). Attempting automatic refresh...');
+            final refreshResponse = await refreshAccessToken(refreshToken);
+            final newAccessToken = refreshResponse['access'];
+            if (newAccessToken != null) {
+              await Storage.saveToken(newAccessToken);
+              print('DEBUG API: Refresh successful. Retrying original request to: $endpoint');
+              // Re-run the request with the new access token
+              return await _makeRequest(endpoint, body, method, newAccessToken);
+            }
+          } catch (refreshErr) {
+            print('DEBUG API: Automatic token refresh failed: $refreshErr');
+            await Storage.clearAllTokens();
+          }
+        }
+      }
       print('DEBUG API: Response body: ${response.body}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -543,6 +566,39 @@ class ApiService {
   }
 
   // Test endpoint for debugging
+  // Community Champion: Apply
+  static Future<dynamic> applyForChampion(List<int> specializedInterestIds) async {
+    final token = await Storage.getToken();
+    return await _makeRequest(
+      'v1/accounts/profile/champion/apply/',
+      {'specialized_interests': specializedInterestIds},
+      'POST',
+      token,
+    );
+  }
+
+  // Community Champion: Status
+  static Future<dynamic> getChampionStatus() async {
+    final token = await Storage.getToken();
+    return await _makeRequest(
+      'v1/accounts/profile/champion/status/',
+      null,
+      'GET',
+      token,
+    );
+  }
+
+  // Community Champion: Users under champion's specialized interest domains
+  static Future<dynamic> getChampionUsers() async {
+    final token = await Storage.getToken();
+    return await _makeRequest(
+      'v1/accounts/profile/champion/users/',
+      null,
+      'GET',
+      token,
+    );
+  }
+
   static Future<dynamic> testDatabase() async {
     final token = await Storage.getToken();
     return await _makeRequest(

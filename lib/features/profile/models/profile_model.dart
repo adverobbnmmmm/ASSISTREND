@@ -16,6 +16,7 @@ class ProfileModel {
   final String? audioUrl; // Add profile audio URL
   final String? profileImageUrl; // Add profile image URL
   final String? highlightQuestion;
+  final bool isCommunityChampion;
 
   ProfileModel({
     required this.name,
@@ -33,6 +34,7 @@ class ProfileModel {
     this.audioUrl, // Add this parameter
     this.profileImageUrl, // Add this parameter
     this.highlightQuestion,
+    this.isCommunityChampion = false,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -105,6 +107,7 @@ class ProfileModel {
       audioUrl: data['audio_intro_url'] ?? data['audioUrl'], // Add audio URL parsing
       profileImageUrl: data['profile_picture_url'] ?? data['profileImageUrl'], // Add profile image URL parsing
       highlightQuestion: data['highlight_question'] ?? data['highlightQuestion'],
+      isCommunityChampion: data['is_community_champion'] ?? false,
     );
   }
 
@@ -126,6 +129,7 @@ class ProfileModel {
       audioUrl: null,
       profileImageUrl: null,
       highlightQuestion: null,
+      isCommunityChampion: false,
     );
   }
 }

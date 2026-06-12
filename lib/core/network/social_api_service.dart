@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:assistrend/shared/utils/storage.dart';
+import 'package:assistrend/core/network/api_service.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:assistrend/config/app_config.dart';
@@ -52,6 +53,25 @@ class SocialApiService {
           break;
         default:
           throw Exception('Unsupported HTTP method');
+      }
+
+      if (response.statusCode == 401) {
+        final refreshToken = await Storage.getRefreshToken();
+        if (refreshToken != null) {
+          try {
+            print('DEBUG SOCIAL SOCIAL API: Access token expired. Attempting refresh...');
+            final refreshResponse = await ApiService.refreshAccessToken(refreshToken);
+            final newAccessToken = refreshResponse['access'];
+            if (newAccessToken != null) {
+              await Storage.saveToken(newAccessToken);
+              print('DEBUG SOCIAL API: Token refresh successful. Retrying original request...');
+              return await _makeRequest(baseUrl, endpoint, body, method, newAccessToken);
+            }
+          } catch (e) {
+            print('DEBUG SOCIAL API: Token refresh failed during automatic retry: $e');
+            await Storage.clearAllTokens();
+          }
+        }
       }
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
