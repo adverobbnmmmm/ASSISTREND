@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chat_page.dart';
-import 'phone_page.dart';
+import 'spark_welcome_page.dart';
 
 class ConnectButton extends StatefulWidget {
   const ConnectButton({super.key});
@@ -31,10 +31,10 @@ class _ConnectButtonState extends State<ConnectButton>
 
   void _showStaticPage(BuildContext context, String title) {
     Widget page;
-    if (title == 'Chat') {
-      page = const ChatPage();
+    if (title == 'Arena') {
+      page = const ArenaPage();
     } else {
-      page = const PhonePage();
+      page = const SparkWelcomePage();
     }
     Navigator.push(
       context,
@@ -105,9 +105,9 @@ class _ConnectButtonState extends State<ConnectButton>
                         color: Colors.white,
                         width: 70,
                         height: 70,
-                        text: 'Chat',
+                        text: 'Spark',
                         onClick: () {
-                          _showStaticPage(context, 'Chat');
+                          _showStaticPage(context, 'Spark');
                         },
                       ),
                     ),
@@ -124,9 +124,9 @@ class _ConnectButtonState extends State<ConnectButton>
                         color: Colors.white,
                         width: 70,
                         height: 70,
-                        text: 'Phone',
+                        text: 'Arena',
                         onClick: () {
-                          _showStaticPage(context, 'Phone');
+                          _showStaticPage(context, 'Arena');
                         },
                       ),
                     ),

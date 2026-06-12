@@ -97,14 +97,70 @@ class ApiService {
   // User Registration
   static Future<dynamic> register(
       String name, String email, String phone, String password, bool privacy_policy_accepted) async {
-    return await _makeRequest(
-      'account/register/',
+    // Legacy single-screen signup compatibility wrapper.
+    // The current backend supports only multi-step signup endpoints.
+    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    final normalizedEmail = email.trim().toLowerCase();
+    final normalizedUsername = name.trim().replaceAll(RegExp(r'\s+'), '_');
+
+    await _makeRequest(
+      'v1/accounts/auth/signup/step_1/',
       {
-        'name': name,
-        'email': email,
-        'phone': phone,
+        'email': normalizedEmail,
+        'username': normalizedUsername,
+        'session_id': sessionId,
+      },
+      'POST',
+      null,
+    );
+
+    await _makeRequest(
+      'v1/accounts/auth/signup/step_2/',
+      {
         'password': password,
+        'confirm_password': password,
+        'session_id': sessionId,
+      },
+      'POST',
+      null,
+    );
+
+    // Old signup screen does not collect gender/DOB; use safe defaults.
+    await _makeRequest(
+      'v1/accounts/auth/signup/step_3/',
+      {
+        'gender': 'other',
+        'date_of_birth': '2000-01-01',
+        'session_id': sessionId,
+      },
+      'POST',
+      null,
+    );
+
+    await _makeRequest(
+      'v1/accounts/auth/signup/step_4/',
+      {
+        'phone_number': phone,
+        'session_id': sessionId,
+      },
+      'POST',
+      null,
+    );
+
+    await _makeRequest(
+      'v1/accounts/auth/signup/step_5/',
+      {
         'privacy_policy_accepted': privacy_policy_accepted,
+        'session_id': sessionId,
+      },
+      'POST',
+      null,
+    );
+
+    return await _makeRequest(
+      'v1/accounts/auth/signup/complete/',
+      {
+        'session_id': sessionId,
       },
       'POST',
       null,
@@ -213,15 +269,12 @@ class ApiService {
 
   // OTP Verification
   static Future<dynamic> verifyOTP(String email, String otp) async {
-    return await _makeRequest(
-      'account/verify_otp/',
-      {
-        'email': email,
-        'otpCode': otp,
-      },
-      'POST',
-      null,
-    );
+    final otpResult = await verifyEmailOTP(email, otp);
+    if (otpResult['success'] == true) {
+      // After successful OTP verification, exchange email for JWT tokens.
+      return await oauthCallback(email);
+    }
+    return otpResult;
   }
 
   // Email Verification - Send OTP
@@ -239,15 +292,28 @@ class ApiService {
 
   // Email Verification - Verify OTP
   static Future<dynamic> verifyEmailOTP(String email, String otpCode) async {
-    return await _makeRequest(
-      'v1/accounts/auth/email-verification/verify_otp/',
-      {
+    final uri = Uri.parse('${baseUrl}v1/accounts/auth/email-verification/verify_otp/');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
         'email': email,
         'otp_code': otpCode,
-      },
-      'POST',
-      null,
+      }),
     );
+
+    if (response.body.isEmpty) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {};
+      }
+      throw Exception('Request failed with status ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+    throw Exception('Unexpected verify OTP response format');
   }
 
   // Email Verification - Resend OTP
@@ -324,7 +390,7 @@ class ApiService {
   // Get User Profile (basic info from auth service)
   static Future<dynamic> getProfile(String token) async {
     return await _makeRequest(
-      'account/profile/',
+      'v1/accounts/profile/me/',
       null,
       'GET',
       token,
@@ -422,12 +488,27 @@ class ApiService {
 
   static Future<dynamic> checkProfileExists(String userId) async {
     final token = await Storage.getToken();
-    return await _makeRequest(
-      'account/check-profile/?userId=$userId',
-      null,
-      'GET',
-      token,
+    if (token == null) {
+      return {'profileExists': false};
+    }
+
+    final uri = Uri.parse('${baseUrl}v1/accounts/profile/me/');
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
     );
+
+    if (response.statusCode == 200) {
+      return {'profileExists': true};
+    }
+    if (response.statusCode == 404) {
+      return {'profileExists': false};
+    }
+
+    throw Exception('Failed to check profile: ${response.statusCode}');
   }
 
   static Future<dynamic> getUserProfile(String userId) async {

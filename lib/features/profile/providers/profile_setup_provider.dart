@@ -37,7 +37,8 @@ class ProfileSetupNotifier extends StateNotifier<ProfileSetupState> {
       final response = await ApiService.getInterests();
       
       if (response['status'] == 'success') {
-        final interests = (response['interests'] as List)
+        final rawInterests = (response['interests'] as List?) ?? [];
+        final interests = rawInterests
             .map((json) => InterestCategory.fromJson(json))
             .toList();
         

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_service.dart';
-import '../providers/signup_provider.dart';
+import '../../../shared/utils/storage.dart';
 
 class OTPScreen extends ConsumerStatefulWidget {
   final String email;
@@ -73,16 +73,37 @@ class _OTPScreenState extends ConsumerState<OTPScreen> {
       );
 
       if (response['success'] == true) {
+        final authResponse = await ApiService.oauthCallback(
+          widget.email.trim().toLowerCase(),
+        );
+        if (authResponse['success'] != true) {
+          throw Exception(authResponse['error'] ?? 'Post-OTP authentication failed');
+        }
+
+        final accessToken = authResponse['access']?.toString();
+        final refreshToken = authResponse['refresh']?.toString();
+        final userId = authResponse['userId']?.toString();
+        final userObj = authResponse['user'] as Map<String, dynamic>?;
+        final isProfileComplete = userObj?['is_profile_complete'] == true;
+
+        if (accessToken == null || refreshToken == null || userId == null) {
+          throw Exception('Authentication tokens missing after OTP verification');
+        }
+
+        await Storage.saveToken(accessToken);
+        await Storage.saveRefreshToken(refreshToken);
+        await Storage.saveUserId(userId);
+        await Storage.saveProfileComplete(isProfileComplete);
+
         _showSuccess('Email verified successfully!');
-        
-        // Navigate to home page after successful verification
+
         if (mounted) {
           await Future.delayed(Duration(milliseconds: 500));
-          context.go('/home');
+          context.go(isProfileComplete ? '/home' : '/profile-setup');
         }
       } else {
         final error = response['error'] ?? 'OTP verification failed';
-        final remainingAttempts = response['remaining_attempts'] ?? 0;
+        final remainingAttempts = response['remaining_attempts'];
         
         if (remainingAttempts != null) {
           setState(() {

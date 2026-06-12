@@ -27,5 +27,5 @@ class AppConfig {
   static const String healthCheckUrl = '$mainServerUrl/api/server/health/';
 
   /// Specific endpoints
-  static const String getNameEndpoint = '$mainServerUrl/api/account/getName/';
+  static const String getNameEndpoint = '$mainServerUrl/api/v1/accounts/profile/me/';
 }

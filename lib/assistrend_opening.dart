@@ -89,11 +89,22 @@ class _AssistrendOpeningState extends State<AssistrendOpening> with SingleTicker
       if (isLoggedIn) {
         // Fetch user name from backend and store in SharedPreferences
         try {
-          final url = Uri.parse('${AppConfig.getNameEndpoint}?userId=$userId');
-          final response = await http.get(url);
+          final url = Uri.parse(AppConfig.getNameEndpoint);
+          final response = await http.get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null) 'Authorization': 'Bearer $token',
+            },
+          );
           if (response.statusCode == 200) {
             final data = json.decode(response.body);
-            final name = data['name'] ?? '';
+            final profileData = (data['data'] ?? data) as Map<String, dynamic>;
+            final name = (profileData['display_name'] ??
+                    profileData['name'] ??
+                    profileData['username'] ??
+                    '')
+                .toString();
             await prefs.setString('user_name', name);
             print('DEBUG: Stored user_name: $name');
           } else {

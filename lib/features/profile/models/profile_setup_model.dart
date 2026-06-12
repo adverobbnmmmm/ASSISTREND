@@ -64,9 +64,10 @@ class InterestSubcategory {
   });
 
   factory InterestSubcategory.fromJson(Map<String, dynamic> json) {
+    final rawId = json['id'];
     return InterestSubcategory(
-      id: json['id'],
-      name: json['name'] ?? '',
+      id: rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '') ?? 0,
+      name: (json['name'] ?? json['interestName'] ?? '').toString(),
     );
   }
 }
@@ -83,13 +84,16 @@ class InterestCategory {
   });
 
   factory InterestCategory.fromJson(Map<String, dynamic> json) {
+    final rawId = json['id'];
+    final rawSubcategories =
+        (json['subcategories'] ?? json['children'] ?? []) as List<dynamic>;
+
     return InterestCategory(
-      id: json['id'],
-      name: json['name'] ?? '',
-      subcategories: (json['subcategories'] as List<dynamic>?)
-              ?.map((sub) => InterestSubcategory.fromJson(sub))
-              .toList() ??
-          [],
+      id: rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '') ?? 0,
+      name: (json['name'] ?? json['interestName'] ?? '').toString(),
+      subcategories: rawSubcategories
+          .map((sub) => InterestSubcategory.fromJson(sub as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

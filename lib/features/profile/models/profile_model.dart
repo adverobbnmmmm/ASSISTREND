@@ -50,12 +50,28 @@ class ProfileModel {
       parsedInterests = (data['interests'] as List<dynamic>)
           .map((interest) {
             if (interest is Map) {
-              return (interest['interestId__interestName'] ?? interest['name'] ?? '') as String;
+              return (interest['interestId__interestName'] ??
+                      interest['interestName'] ??
+                      interest['name'] ??
+                      '') as String;
             }
             return interest.toString();
           })
           .where((name) => name.isNotEmpty)
           .toList();
+    }
+
+    List<SocialLink> parsedSocials = (data['socials'] as List<dynamic>?)
+            ?.map((social) => SocialLink.fromJson(social))
+            .toList() ??
+        [];
+    if (parsedSocials.isEmpty && data['website_url'] != null && data['website_url'].toString().isNotEmpty) {
+      parsedSocials = [
+        SocialLink(
+          platform: 'Website',
+          url: data['website_url'].toString(),
+        ),
+      ];
     }
 
     return ProfileModel(
@@ -84,10 +100,7 @@ class ProfileModel {
               ?.map((tag) => tag['post_id'] as int)
               .toList() ??
           [],
-      socials: (data['socials'] as List<dynamic>?)
-              ?.map((social) => SocialLink.fromJson(social))
-              .toList() ??
-          [],
+      socials: parsedSocials,
       interests: parsedInterests,
       audioUrl: data['audio_intro_url'] ?? data['audioUrl'], // Add audio URL parsing
       profileImageUrl: data['profile_picture_url'] ?? data['profileImageUrl'], // Add profile image URL parsing
@@ -197,8 +210,8 @@ class SocialLink {
 
   factory SocialLink.fromJson(Map<String, dynamic> json) {
     return SocialLink(
-      platform: json['platform'] ?? '',
-      url: json['url'] ?? '',
+      platform: (json['platform'] ?? json['name'] ?? '').toString(),
+      url: (json['url'] ?? json['link'] ?? '').toString(),
     );
   }
 

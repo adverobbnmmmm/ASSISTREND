@@ -114,6 +114,19 @@ class UploadNotifier extends StateNotifier<UploadState> {
 
   UploadNotifier(this._mediaService) : super(UploadState());
 
+  int _categoryToCode(String? category) {
+    switch ((category ?? '').trim().toLowerCase()) {
+      case 'opinion':
+        return 1;
+      case 'experience':
+        return 2;
+      case 'adventure':
+        return 3;
+      default:
+        return 0;
+    }
+  }
+
   // Add a tagged user
   void addTaggedUser(UserModel user) {
     if (!state.taggedUsers.contains(user)) {
@@ -431,7 +444,7 @@ class UploadNotifier extends StateNotifier<UploadState> {
       // userId is no longer needed/trusted).
       final Map<String, dynamic> requestBody = {
         'caption': state.caption,
-        'category': state.category,
+        'category': _categoryToCode(state.category),
       };
 
       // Add URLs based on what was uploaded
