@@ -9,63 +9,113 @@ class ProfilePhotoService {
   static final ImagePicker _picker = ImagePicker();
   
   /// Request camera permission
-  static Future<bool> requestCameraPermission() async {
+  static Future<bool> requestCameraPermission({BuildContext? context}) async {
     try {
       final status = await Permission.camera.status;
-      debugPrint('ProfilePhotoService: Current camera permission status: $status');
-      
-      if (status.isGranted) {
-        debugPrint('ProfilePhotoService: Camera permission already granted');
-        return true;
-      }
-      
-      if (status.isDenied) {
-        debugPrint('ProfilePhotoService: Requesting camera permission');
-        final newStatus = await Permission.camera.request();
-        debugPrint('ProfilePhotoService: New camera permission status: $newStatus');
-        return newStatus.isGranted;
-      }
-      
+
+      if (status.isGranted) return true;
+
       if (status.isPermanentlyDenied) {
         debugPrint('ProfilePhotoService: Camera permission permanently denied');
+        if (context != null && context.mounted) {
+          _showPermanentlyDeniedDialog(context, 'Camera');
+        }
         return false;
       }
-      
-      return false;
+
+      final newStatus = await Permission.camera.request();
+      if (newStatus.isGranted) return true;
+
+      if (newStatus.isPermanentlyDenied && context != null && context.mounted) {
+        _showPermanentlyDeniedDialog(context, 'Camera');
+      }
+      return newStatus.isGranted;
     } catch (e) {
       debugPrint('ProfilePhotoService: Error requesting camera permission: $e');
       return false;
     }
   }
-  
-  /// Request photos permission
-  static Future<bool> requestPhotosPermission() async {
+
+  /// Request photos permission (tries granular Permission.photos first,
+  /// falls back to Permission.storage for pre-Android-13 devices).
+  static Future<bool> requestPhotosPermission({BuildContext? context}) async {
     try {
-      final status = await Permission.photos.status;
-      debugPrint('ProfilePhotoService: Current photos permission status: $status');
-      
-      if (status.isGranted) {
-        debugPrint('ProfilePhotoService: Photos permission already granted');
-        return true;
-      }
-      
-      if (status.isDenied) {
-        debugPrint('ProfilePhotoService: Requesting photos permission');
-        final newStatus = await Permission.photos.request();
-        debugPrint('ProfilePhotoService: New photos permission status: $newStatus');
-        return newStatus.isGranted;
-      }
-      
+      // Try granular Permission.photos first (Android 13+)
+      var status = await Permission.photos.status;
+      if (status.isGranted) return true;
+
       if (status.isPermanentlyDenied) {
-        debugPrint('ProfilePhotoService: Photos permission permanently denied');
+        if (context != null && context.mounted) {
+          _showPermanentlyDeniedDialog(context, 'Photos');
+        }
         return false;
       }
-      
-      return false;
+
+      if (status.isDenied) {
+        final newStatus = await Permission.photos.request();
+        if (newStatus.isGranted) return true;
+      }
+
+      // Fall back to legacy Permission.storage (Android 12 and below)
+      status = await Permission.storage.status;
+      if (status.isGranted) return true;
+
+      if (status.isPermanentlyDenied) {
+        if (context != null && context.mounted) {
+          _showPermanentlyDeniedDialog(context, 'Storage');
+        }
+        return false;
+      }
+
+      final newStatus = await Permission.storage.request();
+      if (newStatus.isGranted) return true;
+
+      if (newStatus.isPermanentlyDenied && context != null && context.mounted) {
+        _showPermanentlyDeniedDialog(context, 'Storage');
+      }
+      return newStatus.isGranted;
     } catch (e) {
       debugPrint('ProfilePhotoService: Error requesting photos permission: $e');
       return false;
     }
+  }
+
+  /// Show dialog when a permission is permanently denied.
+  static void _showPermanentlyDeniedDialog(
+    BuildContext context,
+    String permissionName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text(
+          '$permissionName Permission Required',
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Assistrend needs $permissionName access to continue. '
+          'Please grant the permission in your device settings.',
+          style: TextStyle(color: Colors.grey.shade300),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              openAppSettings();
+            },
+            child: const Text(
+              'Open Settings',
+              style: TextStyle(color: Colors.blue),
+            ),
+          ),
+        ],
+      ),
+    );
   }
   
   /// Take photo with camera
@@ -219,21 +269,21 @@ class ProfilePhotoService {
     try {
       switch (source) {
         case 'camera':
-          final hasPermission = await requestCameraPermission();
+          final hasPermission = await requestCameraPermission(context: context);
           if (!hasPermission) {
             throw Exception('Camera permission is required');
           }
           return await takePhoto();
           
         case 'gallery':
-          final hasPermission = await requestPhotosPermission();
+          final hasPermission = await requestPhotosPermission(context: context);
           if (!hasPermission) {
             throw Exception('Photos permission is required');
           }
           return await pickFromGallery();
           
         case 'file':
-          final hasPermission = await requestPhotosPermission();
+          final hasPermission = await requestPhotosPermission(context: context);
           if (!hasPermission) {
             throw Exception('Storage permission is required');
           }

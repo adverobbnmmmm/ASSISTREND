@@ -4,6 +4,7 @@ import 'package:assistrend/features/profile/providers/profile_providers.dart';
 import 'package:assistrend/features/profile/models/profile_model.dart';
 import 'package:assistrend/features/profile/presentation/edit_profile.dart';
 import 'package:assistrend/features/auth/providers/auth_provider.dart';
+import 'package:assistrend/shared/utils/storage.dart';
 import 'chat_page.dart';
 import 'spark_welcome_page.dart';
 
@@ -21,6 +22,47 @@ class _ConnectButtonState extends ConsumerState<ConnectButton>
       degTwoTranslationAnimation,
       degThreeTranslationAnimation;
   late Animation rotationAnimation;
+
+  String? _userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _initUserId();
+    animationController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 250));
+    degOneTranslationAnimation = TweenSequence([
+      TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 0.0, end: 1.2), weight: 75.0),
+      TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 1.2, end: 1.0), weight: 25.0),
+    ]).animate(animationController);
+    degTwoTranslationAnimation = TweenSequence([
+      TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 0.0, end: 1.4), weight: 55.0),
+      TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 1.4, end: 1.0), weight: 45.0),
+    ]).animate(animationController);
+    degThreeTranslationAnimation = TweenSequence([
+      TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 0.0, end: 1.75), weight: 35.0),
+      TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 1.75, end: 1.0), weight: 65.0),
+    ]).animate(animationController);
+    rotationAnimation = Tween<double>(begin: 0.0, end: 0.0).animate(
+        CurvedAnimation(parent: animationController, curve: Curves.easeInOut));
+    animationController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  Future<void> _initUserId() async {
+    _userId = await Storage.getUserId();
+    if (_userId == null) {
+      _userId = ref.read(authProvider).userId;
+    }
+    if (mounted) setState(() {});
+  }
 
   double getRadiansFromDegree(double degree) {
     double unitRadian = 57.295779513;
@@ -44,36 +86,6 @@ class _ConnectButtonState extends ConsumerState<ConnectButton>
       context,
       MaterialPageRoute(builder: (context) => page),
     );
-  }
-
-  @override
-  void initState() {
-    animationController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 250));
-    degOneTranslationAnimation = TweenSequence([
-      TweenSequenceItem<double>(
-          tween: Tween<double>(begin: 0.0, end: 1.2), weight: 75.0),
-      TweenSequenceItem<double>(
-          tween: Tween<double>(begin: 1.2, end: 1.0), weight: 25.0),
-    ]).animate(animationController);
-    degTwoTranslationAnimation = TweenSequence([
-      TweenSequenceItem<double>(
-          tween: Tween<double>(begin: 0.0, end: 1.4), weight: 55.0),
-      TweenSequenceItem<double>(
-          tween: Tween<double>(begin: 1.4, end: 1.0), weight: 45.0),
-    ]).animate(animationController);
-    degThreeTranslationAnimation = TweenSequence([
-      TweenSequenceItem<double>(
-          tween: Tween<double>(begin: 0.0, end: 1.75), weight: 35.0),
-      TweenSequenceItem<double>(
-          tween: Tween<double>(begin: 1.75, end: 1.0), weight: 65.0),
-    ]).animate(animationController);
-    rotationAnimation = Tween<double>(begin: 0.0, end: 0.0).animate(
-        CurvedAnimation(parent: animationController, curve: Curves.easeInOut));
-    super.initState();
-    animationController.addListener(() {
-      setState(() {});
-    });
   }
 
   void _showIncompleteProfileDialog(BuildContext context, double completion, ProfileModel profile) {
@@ -146,17 +158,21 @@ class _ConnectButtonState extends ConsumerState<ConnectButton>
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
-    final userId = authState.userId;
-    
-    // Fetch profile if not loaded yet
-    if (userId != null && ref.read(profileProvider).status == ProfileStatus.initial) {
+    final userId = _userId ?? ref.watch(authProvider).userId;
+
+    final profileState = ref.watch(profileProvider);
+
+    // Fetch profile exactly once — only when status is initial (not on errors
+    // or loading states which would cause repeated calls on every rebuild).
+    if (userId != null && profileState.status == ProfileStatus.initial) {
       Future.microtask(() {
-        ref.read(profileProvider.notifier).fetchProfile(userId);
+        if (ref.read(profileProvider).status == ProfileStatus.initial) {
+          ref.read(profileProvider.notifier).fetchProfile(userId);
+        }
       });
     }
 
-    final profile = ref.watch(profileProvider).profile;
+    final profile = profileState.profile;
     
     // Calculate profile completion percentage
     double completion = 0.0;

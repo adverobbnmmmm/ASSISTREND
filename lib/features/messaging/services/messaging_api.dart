@@ -93,4 +93,57 @@ class MessagingApi {
     }
     throw Exception('Failed to load users (${res.statusCode})');
   }
+
+  /// Returns arena groups matched to the current user's interests.
+  static Future<List<ArenaGroupInfo>> getArenaGroups() async {
+    final res = await http.get(
+      Uri.parse('${_base}arena/groups/'),
+      headers: await _headers(),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return (data['groups'] as List<dynamic>)
+          .map((g) => ArenaGroupInfo.fromJson(g))
+          .toList();
+    }
+    throw Exception('Failed to load arena groups (${res.statusCode})');
+  }
+
+  /// Joins the arena group for [interestId] and returns the conversation.
+  static Future<Conversation> joinArenaGroup(int interestId) async {
+    final res = await http.post(
+      Uri.parse('${_base}arena/groups/$interestId/join/'),
+      headers: await _headers(),
+    );
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return Conversation.fromJson(jsonDecode(res.body)['conversation']);
+    }
+    throw Exception('Failed to join arena group (${res.statusCode})');
+  }
+}
+
+class ArenaGroupInfo {
+  final int interestId;
+  final String interestName;
+  final int conversationId;
+  final int memberCount;
+  final bool isMember;
+
+  ArenaGroupInfo({
+    required this.interestId,
+    required this.interestName,
+    required this.conversationId,
+    required this.memberCount,
+    required this.isMember,
+  });
+
+  factory ArenaGroupInfo.fromJson(Map<String, dynamic> json) {
+    return ArenaGroupInfo(
+      interestId: json['interest_id'] ?? 0,
+      interestName: json['interest_name'] ?? '',
+      conversationId: json['conversation_id'] ?? 0,
+      memberCount: json['member_count'] ?? 0,
+      isMember: json['is_member'] ?? false,
+    );
+  }
 }

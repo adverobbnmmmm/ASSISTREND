@@ -9,22 +9,28 @@ class PostsState {
   final List<Post> posts;
   final bool isLoading;
   final String? error;
+  // True after the first fetch attempt (success or failure) so we don't
+  // re-trigger automatically on every rebuild after a failure.
+  final bool hasFetched;
 
   PostsState({
     this.posts = const [],
     this.isLoading = false,
     this.error,
+    this.hasFetched = false,
   });
 
   PostsState copyWith({
     List<Post>? posts,
     bool? isLoading,
     String? error,
+    bool? hasFetched,
   }) {
     return PostsState(
       posts: posts ?? this.posts,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      hasFetched: hasFetched ?? this.hasFetched,
     );
   }
 }
@@ -43,11 +49,13 @@ class PostsNotifier extends StateNotifier<PostsState> {
       state = state.copyWith(
         posts: posts,
         isLoading: false,
+        hasFetched: true,
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
+        hasFetched: true,
       );
     }
   }
@@ -91,9 +99,8 @@ class PostsNotifier extends StateNotifier<PostsState> {
         state = state.copyWith(posts: updatedPosts, error: 'Failed to update like');
       }
     } catch (e) {
+      // Revert optimistic update without re-fetching (avoids cascade)
       state = state.copyWith(error: e.toString());
-      // Revert optimistic update
-      await fetchPosts();
     }
   }
 

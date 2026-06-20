@@ -7,50 +7,27 @@ class SparkFlowHeader extends StatelessWidget {
 
   const SparkFlowHeader({Key? key, required this.stage}) : super(key: key);
 
-  bool get _showTopCenterCheck => stage == SparkFlowStage.guidelines;
-  bool get _showVerticalCheck =>
-      stage == SparkFlowStage.conditions || stage == SparkFlowStage.pool;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 150,
+      height: 140,
       child: Stack(
         children: [
           Positioned.fill(
             child: Column(
               children: [
                 _headerRow(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _subRow(),
               ],
             ),
           ),
           Positioned(
-            top: 58,
+            top: 52,
             left: MediaQuery.of(context).size.width * 0.67,
             child: const _VerticalDottedLine(height: 26),
           ),
-          if (_showVerticalCheck)
-            Positioned(
-              top: 71,
-              left: MediaQuery.of(context).size.width * 0.665,
-              child: const Icon(
-                Icons.check_circle,
-                color: Color(0xFF16DA59),
-                size: 18,
-              ),
-            ),
-          if (_showTopCenterCheck)
-            Positioned(
-              top: 20,
-              left: MediaQuery.of(context).size.width * 0.48,
-              child: const Icon(
-                Icons.check_circle,
-                color: Color(0xFF16DA59),
-                size: 20,
-              ),
-            ),
         ],
       ),
     );
@@ -59,19 +36,24 @@ class SparkFlowHeader extends StatelessWidget {
   Widget _headerRow() {
     return Row(
       children: [
-        const Expanded(
+        Expanded(
           child: _StepChip(
             title: 'Guidelines',
             icon: Icons.menu_book_outlined,
+            isActive: stage == SparkFlowStage.guidelines,
+            isDone: stage == SparkFlowStage.conditions ||
+                stage == SparkFlowStage.pool,
           ),
         ),
         const SizedBox(width: 8),
         const SizedBox(width: 32, child: _HorizontalDottedLine()),
         const SizedBox(width: 8),
-        const Expanded(
+        Expanded(
           child: _StepChip(
             title: 'Conditions',
             icon: Icons.receipt_long_outlined,
+            isActive: stage == SparkFlowStage.conditions,
+            isDone: stage == SparkFlowStage.pool,
           ),
         ),
       ],
@@ -81,10 +63,12 @@ class SparkFlowHeader extends StatelessWidget {
   Widget _subRow() {
     return Row(
       children: [
-        const Expanded(
+        Expanded(
           child: _StepChip(
             title: 'Room',
             icon: Icons.meeting_room_outlined,
+            isActive: false,
+            isDone: false,
           ),
         ),
         const SizedBox(width: 8),
@@ -95,6 +79,7 @@ class SparkFlowHeader extends StatelessWidget {
             title: 'Pool',
             icon: Icons.pool_outlined,
             isActive: stage == SparkFlowStage.pool,
+            isDone: false,
           ),
         ),
       ],
@@ -106,37 +91,62 @@ class _StepChip extends StatelessWidget {
   final String title;
   final IconData icon;
   final bool isActive;
+  final bool isDone;
 
   const _StepChip({
     required this.title,
     required this.icon,
     this.isActive = false,
+    this.isDone = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Color borderColor = isActive
+        ? const Color(0xFF1D5EFF)
+        : isDone
+            ? const Color(0xFF16DA59).withOpacity(0.6)
+            : Colors.white24;
+
+    final Color bgColor = isActive
+        ? const Color(0xFF1D5EFF).withOpacity(0.12)
+        : isDone
+            ? const Color(0xFF16DA59).withOpacity(0.07)
+            : Colors.transparent;
+
+    final Color iconColor = isActive
+        ? const Color(0xFF1D5EFF)
+        : isDone
+            ? const Color(0xFF16DA59)
+            : Colors.white54;
+
+    final Color textColor = isActive
+        ? Colors.white
+        : isDone
+            ? Colors.white70
+            : Colors.white38;
+
     return Container(
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: isActive ? Colors.white.withOpacity(0.08) : Colors.transparent,
+        color: bgColor,
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: isActive ? Colors.white54 : Colors.white30,
-          width: 1.3,
-        ),
+        border: Border.all(color: borderColor, width: 1.3),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Colors.white, size: 20),
+          isDone
+              ? const Icon(Icons.check_circle, color: Color(0xFF16DA59), size: 18)
+              : Icon(icon, color: iconColor, size: 20),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               title,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: textColor,
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
               ),

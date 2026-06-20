@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/profile_providers.dart';
 import '../models/profile_model.dart';
 import 'package:assistrend/features/auth/providers/auth_provider.dart';
+import 'package:assistrend/shared/utils/storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../home/models/post_model.dart' as HomePost;
 import '../../home/presentation/postbottombar.dart';
@@ -83,9 +84,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   void _loadUserProfile() async {
     try {
-      final authState = ref.read(authProvider);
-      final userId = authState.userId;
-      
+      // Read userId from Storage first (always available from SharedPreferences),
+      // then fall back to the authProvider.  The authProvider's
+      // _initializeAuthState() is async and may not have completed by the
+      // time initState fires, so authState.userId can still be null even
+      // though the user is actually logged in.
+      String? userId = await Storage.getUserId();
+
+      if (userId == null) {
+        userId = ref.read(authProvider).userId;
+      }
+
       if (userId != null) {
         await ref.read(profileProvider.notifier).fetchProfile(userId);
       } else {

@@ -4,14 +4,14 @@
 class AppConfig {
   /// Main backend server (accounts, auth, etc.)
   static const String mainServerHost = '192.168.0.109';
-  static const int mainServerPort = 8000;
+  static const int mainServerPort = 8001;
   static const String mainServerUrl = 'http://$mainServerHost:$mainServerPort';
 
   /// Social service backend server
   /// Now served by the SAME Django server as the main backend (port 8000),
   /// under the /api/social-service/features/ path.
   static const String socialServerHost = '192.168.0.109';
-  static const int socialServerPort = 8000;
+  static const int socialServerPort = 8001;
   static const String socialServerUrl = 'http://$socialServerHost:$socialServerPort';
 
   /// WebSocket base (same Django server, ws:// scheme) for live chat.

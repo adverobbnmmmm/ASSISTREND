@@ -1,12 +1,9 @@
 import 'package:assistrend/features/home/presentation/appbar.dart';
-import 'package:assistrend/features/home/presentation/carousel.dart';
 import 'package:assistrend/features/home/presentation/connect.dart';
 import 'package:assistrend/features/home/presentation/posts.dart';
 import 'package:assistrend/features/home/services/audio_player_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
-import 'package:assistrend/features/auth/providers/auth_provider.dart';
 import 'package:assistrend/features/home/providers/posts_provider.dart';
 import 'messenger.dart';
 
@@ -30,33 +27,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     super.dispose();
   }
 
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
-    try {
-      print('Logout initiated');
-      
-      print('Calling logout on auth provider');
-      // Use the auth provider to logout
-      await ref.read(authProvider.notifier).logout();
-      
-      print('Logout completed');
-      
-      // Small delay to ensure state is updated
-      await Future.delayed(Duration(milliseconds: 100));
-      
-      // Navigate directly without closing any dialogs
-      if (context.mounted) {
-        print('Navigating to opening screen');
-        // Navigate to opening screen to trigger proper auth flow
-        context.go('/');
-      }
-    } catch (e) {
-      print('Logout error: $e');
-      // Even if logout fails, clear local state and navigate
-      if (context.mounted) {
-        context.go('/');
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,9 +37,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     // Watch posts state
     final postsState = ref.watch(postsProvider);
     
-    // Fetch posts when the widget is built for the first time
+    // Fetch posts once on first mount. hasFetched prevents re-triggering on
+    // every rebuild that follows an error or empty state.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (postsState.posts.isEmpty && !postsState.isLoading) {
+      if (!postsState.hasFetched && !postsState.isLoading) {
         ref.read(postsProvider.notifier).fetchPosts();
       }
     });
@@ -144,22 +115,36 @@ class _HomePageState extends ConsumerState<HomePage> {
     
     if (postsState.error != null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error, color: Colors.red, size: 50),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to load posts',
-              style: const TextStyle(color: Colors.white, fontSize: 18),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              postsState.error!,
-              style: const TextStyle(color: Colors.red, fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.wifi_off_rounded, color: Colors.white38, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                'Could not load posts',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                postsState.error!,
+                style: const TextStyle(color: Colors.white38, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1D5EFF),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                onPressed: () => ref.read(postsProvider.notifier).fetchPosts(),
+                icon: const Icon(Icons.refresh, color: Colors.white, size: 18),
+                label: const Text('Retry', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
         ),
       );
     }

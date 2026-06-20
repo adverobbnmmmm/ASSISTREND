@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:assistrend/features/profile/models/profile_model.dart';
 import 'package:assistrend/features/profile/providers/profile_providers.dart';
 import 'package:assistrend/features/auth/providers/auth_provider.dart';
+import 'package:assistrend/shared/utils/storage.dart';
 import 'package:assistrend/core/network/social_api_service.dart';
 import '../widgets/profile_audio_widget.dart';
 import '../widgets/profile_photo_widget.dart';
@@ -25,16 +26,34 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   bool isLoading = false;
   String? errorMessage;
   String? successMessage;
-  
+
+  // Controllers for each social platform
+  Map<String, TextEditingController> _socialControllers = {};
+  final _socialPlatforms = ['Instagram', 'Twitter', 'LinkedIn', 'GitHub', 'YouTube'];
+
+  // Track audio/photo URLs that were updated inline
+  String? _pendingAudioUrl;
+  bool _audioChanged = false;
+  String? _pendingPhotoUrl;
+  bool _photoChanged = false;
+
   @override
   void initState() {
     super.initState();
-    // Initialize controllers with current profile data
     nameController = TextEditingController(text: widget.profile.name);
     aboutController = TextEditingController(text: widget.profile.about);
     emojiController = TextEditingController(text: widget.profile.emoji);
     highlightQuestionController = TextEditingController(text: widget.profile.highlightQuestion);
     interests = List.from(widget.profile.interests);
+
+    // Pre-populate social controllers from existing profile data
+    for (final platform in _socialPlatforms) {
+      final socialLink = widget.profile.socials.firstWhere(
+        (social) => social.platform.toLowerCase() == platform.toLowerCase(),
+        orElse: () => SocialLink(platform: platform, url: ''),
+      );
+      _socialControllers[platform] = TextEditingController(text: socialLink.url);
+    }
   }
 
   @override
@@ -43,12 +62,21 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     aboutController.dispose();
     emojiController.dispose();
     highlightQuestionController.dispose();
+    for (final c in _socialControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _updateName() async {
-    if (nameController.text.trim().isEmpty) {
-      _showErrorMessage('Name cannot be empty');
+  /// Single method that saves ALL edited fields in one go.
+  Future<void> _saveAllChanges() async {
+    // Read from Storage first (always available), fall back to authProvider.
+    String? userId = await Storage.getUserId();
+    if (userId == null) {
+      userId = ref.read(authProvider).userId;
+    }
+    if (userId == null) {
+      _showErrorMessage('User not authenticated');
       return;
     }
 
@@ -59,175 +87,50 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     });
 
     try {
-      final authState = ref.read(authProvider);
-      final userId = authState.userId;
-      
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      
-      // Update the profile in the state
+      // 1. Update text fields via the profile API (single PATCH)
       await ref.read(profileProvider.notifier).updateProfile(
         userId,
         name: nameController.text.trim(),
-      );
-
-      setState(() {
-        successMessage = 'Name updated successfully';
-      });
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Failed to update name: ${e.toString()}';
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _updateAbout() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-      successMessage = null;
-    });
-
-    try {
-      final authState = ref.read(authProvider);
-      final userId = authState.userId;
-      
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      
-      // Update the profile in the state
-      await ref.read(profileProvider.notifier).updateProfile(
-        userId,
         about: aboutController.text.trim(),
-      );
-
-      setState(() {
-        successMessage = 'About section updated successfully';
-      });
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Failed to update about section: ${e.toString()}';
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _updateEmoji() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-      successMessage = null;
-    });
-
-    try {
-      final authState = ref.read(authProvider);
-      final userId = authState.userId;
-      
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      
-      // Update the profile in the state
-      await ref.read(profileProvider.notifier).updateProfile(
-        userId,
-        emoji: emojiController.text,
-      );
-
-      setState(() {
-        successMessage = 'Emoji updated successfully';
-      });
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Failed to update emoji: ${e.toString()}';
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _updateHighlightQuestion() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-      successMessage = null;
-    });
-
-    try {
-      final authState = ref.read(authProvider);
-      final userId = authState.userId;
-      
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      await ref.read(profileProvider.notifier).updateProfile(
-        userId,
+        emoji: emojiController.text.trim(),
         highlightQuestion: highlightQuestionController.text.trim(),
+        profileImageUrl: _photoChanged ? _pendingPhotoUrl : null,
+        audioUrl: _audioChanged ? _pendingAudioUrl : null,
+        interests: interests.isNotEmpty
+            ? interests.map((name) => name.hashCode).toList()
+            : null,
       );
 
-      setState(() {
-        successMessage = 'Highlight question updated successfully';
-      });
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Failed to update highlight question: ${e.toString()}';
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _updateInterests() async {
-    if (interests.isEmpty) {
-      _showErrorMessage('Please add at least one interest');
-      return;
-    }
-
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-      successMessage = null;
-    });
-
-    try {
-      final authState = ref.read(authProvider);
-      final userId = authState.userId;
-      
-      if (userId == null) {
-        throw Exception('User not authenticated');
+      // 2. Update interests via the social API (if changed)
+      if (interests.isNotEmpty) {
+        await SocialApiService.updateInterests(userId, interests);
       }
 
-      await SocialApiService.updateInterests(
-        userId,
-        interests,
-      );
+      // 3. Update each modified social link
+      for (final platform in _socialPlatforms) {
+        final controller = _socialControllers[platform];
+        if (controller == null) continue;
+        final newUrl = controller.text.trim();
+        final existingLink = widget.profile.socials.firstWhere(
+          (social) => social.platform.toLowerCase() == platform.toLowerCase(),
+          orElse: () => SocialLink(platform: platform, url: ''),
+        );
+        final oldUrl = existingLink.url;
+        // Only call the API if the URL actually changed or is new
+        if (newUrl != oldUrl && newUrl.isNotEmpty) {
+          await SocialApiService.updateSocials(userId, platform, newUrl);
+        }
+      }
+
+      // 4. Refresh profile
+      await ref.read(profileProvider.notifier).fetchProfile(userId);
 
       setState(() {
-        successMessage = 'Interests updated successfully';
+        successMessage = 'Profile updated successfully';
       });
-      
-      // Refresh profile data
-      await ref.read(profileProvider.notifier).fetchProfile(userId);
-      
     } catch (e) {
       setState(() {
-        errorMessage = 'Failed to update interests: ${e.toString()}';
+        errorMessage = 'Failed to update profile: ${e.toString()}';
       });
     } finally {
       setState(() {
@@ -259,125 +162,69 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     });
   }
 
-  Future<void> _updateProfileAudio(String? audioUrl) async {
+  void _onAudioUpdated(String? audioUrl) {
     setState(() {
-      isLoading = true;
-      errorMessage = null;
-      successMessage = null;
+      _pendingAudioUrl = audioUrl;
+      _audioChanged = true;
     });
-
-    try {
-      final authState = ref.read(authProvider);
-      final userId = authState.userId;
-      
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      await ref.read(profileProvider.notifier).updateProfile(
-        userId,
-        audioUrl: audioUrl,
-      );
-      
-      setState(() {
-        successMessage = audioUrl != null 
-            ? 'Profile audio updated successfully' 
-            : 'Profile audio removed successfully';
-      });
-      
-      // Refresh profile data
-      await ref.read(profileProvider.notifier).fetchProfile(userId);
-      
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Failed to update profile audio: ${e.toString()}';
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
   }
 
-  Future<void> _updateProfilePhoto(String? photoUrl) async {
+  void _onPhotoUploaded(String? photoUrl) {
     setState(() {
-      isLoading = true;
-      errorMessage = null;
-      successMessage = null;
+      _pendingPhotoUrl = photoUrl;
+      _photoChanged = true;
     });
-
-    try {
-      final authState = ref.read(authProvider);
-      final userId = authState.userId;
-      
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      await ref.read(profileProvider.notifier).updateProfile(
-        userId,
-        profileImageUrl: photoUrl,
-      );
-      
-      setState(() {
-        successMessage = photoUrl != null 
-            ? 'Profile photo updated successfully' 
-            : 'Profile photo removed successfully';
-      });
-      
-      // Refresh profile data
-      await ref.read(profileProvider.notifier).fetchProfile(userId);
-      
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Failed to update profile photo: ${e.toString()}';
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
   }
 
-  // Update this reusable function for creating more rectangular gradient border buttons
-  Widget _buildGradientBorderButton(String text, VoidCallback onPressed) {
+  Widget _buildGradientBorderButton(String text, VoidCallback onPressed, {bool enabled = true}) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8), // Changed to smaller border radius for more rectangular shape
-        gradient: const LinearGradient(
-          colors: [
-            Colors.red,
-            Colors.orange,
-            Colors.yellow,
-            Colors.green,
-            Colors.blue,
-            Colors.indigo,
-            Colors.purple,
-          ],
+        borderRadius: BorderRadius.circular(8),
+        gradient: LinearGradient(
+          colors: enabled
+              ? [
+                  Colors.red,
+                  Colors.orange,
+                  Colors.yellow,
+                  Colors.green,
+                  Colors.blue,
+                  Colors.indigo,
+                  Colors.purple,
+                ]
+              : List.filled(7, Colors.grey.shade700),
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: Container(
-        margin: const EdgeInsets.all(2), // Border thickness
+        margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          color: const Color(0xFF0A0A0A), // Match background color
-          borderRadius: BorderRadius.circular(6), // Adjusted to maintain border thickness
+          color: const Color(0xFF0A0A0A),
+          borderRadius: BorderRadius.circular(6),
         ),
         child: TextButton(
-          onPressed: onPressed,
+          onPressed: enabled ? onPressed : null,
           style: TextButton.styleFrom(
-            padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(6),
             ),
-            minimumSize: Size(150, 45), // Wider minimum width for more rectangular shape
+            minimumSize: const Size(200, 48),
           ),
-          child: Text(
-            text,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
+          child: isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  text,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
         ),
       ),
     );
@@ -421,7 +268,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       ),
                       child: Text(
                         errorMessage!,
-                        style: TextStyle(color: Colors.red),
+                        style: const TextStyle(color: Colors.red),
                       ),
                     ),
                   if (successMessage != null)
@@ -436,7 +283,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       ),
                       child: Text(
                         successMessage!,
-                        style: TextStyle(color: Colors.green),
+                        style: const TextStyle(color: Colors.green),
                       ),
                     ),
                   _buildProfilePhotoSection(),
@@ -456,6 +303,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   _buildInterestsSection(),
                   const SizedBox(height: 24),
                   _buildSocialsSection(),
+                  const SizedBox(height: 32),
+                  // Single "Update Profile" button
+                  Center(
+                    child: _buildGradientBorderButton('Update Profile', _saveAllChanges),
+                  ),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -463,6 +316,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Widget _buildProfilePhotoSection() {
+    final displayUrl = _photoChanged ? _pendingPhotoUrl : widget.profile.profileImageUrl;
     return Center(
       child: Column(
         children: [
@@ -480,9 +334,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 ),
                 child: CircleAvatar(
                   radius: 48,
-                  backgroundImage: NetworkImage(
-                    "https://ui-avatars.com/api/?name=${widget.profile.name}&background=random"
-                  ),
+                  backgroundImage: displayUrl != null && displayUrl.isNotEmpty
+                      ? NetworkImage(displayUrl)
+                      : NetworkImage(
+                          "https://ui-avatars.com/api/?name=${widget.profile.name}&background=random",
+                        ),
                 ),
               ),
               Positioned(
@@ -497,11 +353,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     border: Border.all(color: Colors.white, width: 2),
                   ),
                   child: IconButton(
-                    icon: Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                    icon: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
                     onPressed: () {
-                      // Implement photo picker
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Profile photo update not implemented yet')),
+                        const SnackBar(content: Text('Use the Profile Photo section below to update')),
                       );
                     },
                   ),
@@ -531,7 +386,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Color(0xFF1A1A1A),
+            color: const Color(0xFF1A1A1A),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey.shade800, width: 1),
           ),
@@ -544,10 +399,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               hintStyle: TextStyle(color: Colors.grey),
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        Center(
-          child: _buildGradientBorderButton('Update Name', _updateName),
         ),
       ],
     );
@@ -562,7 +413,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: Color(0xFF1A1A1A),
+            color: const Color(0xFF1A1A1A),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey.shade800, width: 1),
           ),
@@ -577,10 +428,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        Center(
-          child: _buildGradientBorderButton('Update About', _updateAbout),
-        ),
       ],
     );
   }
@@ -594,7 +441,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Color(0xFF1A1A1A),
+            color: const Color(0xFF1A1A1A),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey.shade800, width: 1),
           ),
@@ -608,10 +455,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        Center(
-          child: _buildGradientBorderButton('Update Highlight Question', _updateHighlightQuestion),
-        ),
       ],
     );
   }
@@ -623,8 +466,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         _buildSectionTitle('Profile Audio'),
         const SizedBox(height: 12),
         ProfileAudioWidget(
-          currentAudioUrl: widget.profile.audioUrl,
-          onAudioUpdated: _updateProfileAudio,
+          currentAudioUrl: _audioChanged ? _pendingAudioUrl : widget.profile.audioUrl,
+          onAudioUpdated: _onAudioUpdated,
         ),
       ],
     );
@@ -637,8 +480,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         _buildSectionTitle('Profile Photo'),
         const SizedBox(height: 12),
         ProfilePhotoWidget(
-          currentProfileImageUrl: widget.profile.profileImageUrl,
-          onPhotoUploaded: _updateProfilePhoto,
+          currentProfileImageUrl: _photoChanged ? _pendingPhotoUrl : widget.profile.profileImageUrl,
+          onPhotoUploaded: _onPhotoUploaded,
         ),
       ],
     );
@@ -650,67 +493,24 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       children: [
         _buildSectionTitle('Emoji'),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Color(0xFF1A1A1A),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade800, width: 1),
-                ),
-                child: TextField(
-                  controller: emojiController,
-                  style: const TextStyle(color: Colors.white, fontSize: 24),
-                  maxLength: 2, // Most emojis are 1-2 code points
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    hintText: '😊',
-                    hintStyle: TextStyle(color: Colors.grey),
-                    counterText: '', // Hide character counter
-                  ),
-                ),
-              ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade800, width: 1),
+          ),
+          child: TextField(
+            controller: emojiController,
+            style: const TextStyle(color: Colors.white, fontSize: 24),
+            maxLength: 2,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: '😊',
+              hintStyle: TextStyle(color: Colors.grey),
+              counterText: '',
             ),
-            const SizedBox(width: 16),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                gradient: const LinearGradient(
-                  colors: [
-                    Colors.red,
-                    Colors.orange,
-                    Colors.yellow,
-                    Colors.green,
-                    Colors.blue,
-                    Colors.indigo,
-                    Colors.purple,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Container(
-                margin: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0A0A0A),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: TextButton(
-                  onPressed: _updateEmoji,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  child: Text('Update'),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
         const SizedBox(height: 8),
         Text(
@@ -723,7 +523,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   Widget _buildInterestsSection() {
     final TextEditingController interestController = TextEditingController();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -735,7 +535,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: Color(0xFF1A1A1A),
+                  color: const Color(0xFF1A1A1A),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade800, width: 1),
                 ),
@@ -758,8 +558,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             ),
             const SizedBox(width: 16),
             Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
                   colors: [
                     Colors.red,
                     Colors.orange,
@@ -774,14 +574,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 ),
                 shape: BoxShape.circle,
               ),
-              padding: EdgeInsets.all(3), // border thickness
+              padding: const EdgeInsets.all(3),
               child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black, // background color of button
+                decoration: const BoxDecoration(
+                  color: Colors.black,
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  icon: Icon(Icons.add_circle, size: 36, color: Colors.white),
+                  icon: const Icon(Icons.add_circle, size: 36, color: Colors.white),
                   onPressed: () {
                     if (interestController.text.trim().isNotEmpty) {
                       _addInterest(interestController.text);
@@ -790,8 +590,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   },
                 ),
               ),
-            )
-
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -800,11 +599,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           runSpacing: 12,
           children: interests.map((interest) => _buildInterestChip(interest)).toList(),
         ),
-        if (interests.isNotEmpty) const SizedBox(height: 16),
-        if (interests.isNotEmpty)
-          Center(
-            child: _buildGradientBorderButton('Update Interests', _updateInterests),
-          ),
       ],
     );
   }
@@ -813,15 +607,15 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     return Stack(
       children: [
         Container(
-          padding: EdgeInsets.fromLTRB(16, 10, 24, 10),
+          padding: const EdgeInsets.fromLTRB(16, 10, 24, 10),
           decoration: BoxDecoration(
-            color: Color(0xFF1A1A1A),
+            color: const Color(0xFF1A1A1A),
             borderRadius: BorderRadius.circular(25),
             border: Border.all(color: Colors.grey.shade800, width: 1),
           ),
           child: Text(
             interest,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -834,12 +628,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           child: GestureDetector(
             onTap: () => _removeInterest(interest),
             child: Container(
-              padding: EdgeInsets.all(2),
+              padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 color: Colors.red.withOpacity(0.8),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.close, color: Colors.white, size: 16),
+              child: const Icon(Icons.close, color: Colors.white, size: 16),
             ),
           ),
         ),
@@ -848,31 +642,19 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Widget _buildSocialsSection() {
-    final platforms = ['Instagram', 'Twitter', 'LinkedIn', 'GitHub', 'YouTube'];
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle('Social Links'),
         const SizedBox(height: 16),
-        ...platforms.map((platform) => _buildSocialField(platform)),
+        ..._socialPlatforms.map((platform) => _buildSocialField(platform)),
       ],
     );
   }
 
   Widget _buildSocialField(String platform) {
-    final TextEditingController urlController = TextEditingController();
-    // Find if this platform exists in the user's socials
-    final socialLink = widget.profile.socials.firstWhere(
-      (social) => social.platform.toLowerCase() == platform.toLowerCase(),
-      orElse: () => SocialLink(
-        platform: platform,
-        url: '',
-      ),
-    );
-    
-    urlController.text = socialLink.url;
-    
+    final controller = _socialControllers[platform]!;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
@@ -881,7 +663,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             width: 90,
             child: Text(
               platform,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -892,85 +674,18 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: Color(0xFF1A1A1A),
+                color: const Color(0xFF1A1A1A),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade800, width: 1),
               ),
               child: TextField(
-                controller: urlController,
+                controller: controller,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: 'Enter $platform URL',
-                  hintStyle: TextStyle(color: Colors.grey),
+                  hintStyle: const TextStyle(color: Colors.grey),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              gradient: const LinearGradient(
-                colors: [
-                  Colors.red,
-                  Colors.orange,
-                  Colors.yellow,
-                  Colors.green,
-                  Colors.blue,
-                  Colors.indigo,
-                  Colors.purple,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Container(
-              margin: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0A0A0A),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: TextButton(
-                onPressed: () async {
-                  if (urlController.text.trim().isEmpty) return;
-                  
-                  try {
-                    final authState = ref.read(authProvider);
-                    final userId = authState.userId;
-                    
-                    if (userId == null) {
-                      throw Exception('User not authenticated');
-                    }
-
-                    await SocialApiService.updateSocials(
-                      userId,
-                      platform,
-                      urlController.text.trim(),
-                    );
-                    
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('$platform link updated successfully')),
-                    );
-                    
-                    // Refresh profile data
-                    await ref.read(profileProvider.notifier).fetchProfile(userId);
-                    
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to update $platform link: ${e.toString()}'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  foregroundColor: Colors.white,
-                  minimumSize: Size(60, 44),
-                ),
-                child: Text('Save'),
               ),
             ),
           ),
@@ -982,11 +697,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: TextStyle(
+      style: const TextStyle(
         color: Colors.white,
         fontSize: 18,
         fontWeight: FontWeight.w600,
       ),
     );
+  }
+}
+
   }
 }

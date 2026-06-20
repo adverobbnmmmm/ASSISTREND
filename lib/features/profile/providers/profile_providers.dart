@@ -113,7 +113,7 @@ final otherUserProfileProvider =
 // Provider for current user's profile
 final currentUserProfileProvider = FutureProvider<ProfileModel>((ref) async {
   final authState = ref.watch(authProvider);
-  final userId = authState.userId;
+  String? userId = authState.userId ?? await Storage.getUserId();
 
   if (userId == null) {
     throw Exception('User not authenticated');

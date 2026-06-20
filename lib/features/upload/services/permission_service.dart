@@ -1,138 +1,155 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
+import 'package:permission_handler/permission_handler.dart';
 
-/// This is a platform-agnostic permission service that works on both mobile and desktop
-/// For mobile it would use permission_handler package
-/// For desktop it mocks the permission behavior for testing UI and flow
+/// Real permission service that uses permission_handler on all platforms.
 class PermissionService {
-  static bool get _isMobilePlatform => 
-      !kIsWeb && (Platform.isAndroid || Platform.isIOS);
-
-  /// Request camera permission, mocked on desktop
+  /// Request camera permission
   static Future<bool> requestCameraPermission(BuildContext context) async {
-    if (!_isMobilePlatform) {
-      // On desktop platforms, show mock message and return true
-      _showMockPermissionInfo(
-        context: context,
-        title: 'Camera Access',
-        message: 'Camera access would be requested on a mobile device.',
-      );
-      return true;
+    final status = await Permission.camera.status;
+
+    if (status.isGranted) return true;
+
+    if (status.isPermanentlyDenied) {
+      _showPermanentlyDeniedDialog(context, 'Camera');
+      return false;
     }
-    
-    // On mobile platform this would use the permission_handler package
-    // For now, just return true to simulate granted permission
-    debugPrint('PermissionService: Camera permission requested on mobile device');
-    
-    // In a real implementation, you would use permission_handler:
-    // final status = await Permission.camera.request();
-    // return status.isGranted;
-    
-    return true;
+
+    final newStatus = await Permission.camera.request();
+    if (newStatus.isGranted) return true;
+
+    if (newStatus.isPermanentlyDenied) {
+      _showPermanentlyDeniedDialog(context, 'Camera');
+    }
+    return false;
   }
 
-  /// Request storage permission, mocked on desktop
+  /// Request storage / photos permission.
+  /// On Android 13+ the granular media permissions (photos) replace
+  /// the old storage permission.  We try the newer one first and fall
+  /// back to the legacy one if it isn't available on this device.
   static Future<bool> requestStoragePermission(BuildContext context) async {
-    if (!_isMobilePlatform) {
-      _showMockPermissionInfo(
-        context: context,
-        title: 'Storage Access',
-        message: 'Storage access would be requested on a mobile device.',
-      );
-      return true;
+    // Try granular Permission.photos first (Android 13+)
+    var status = await Permission.photos.status;
+    if (status.isGranted) return true;
+
+    if (status.isPermanentlyDenied) {
+      _showPermanentlyDeniedDialog(context, 'Photos');
+      return false;
     }
-    
-    // On mobile platform this would use the permission_handler package
-    return true;
+
+    if (status.isDenied) {
+      final newStatus = await Permission.photos.request();
+      if (newStatus.isGranted) return true;
+      // If photos isn't a valid permission on this device (pre-Android 13),
+      // permission_handler returns undetermined / limited — fall through.
+    }
+
+    // Fall back to legacy Permission.storage (Android 12 and below)
+    status = await Permission.storage.status;
+    if (status.isGranted) return true;
+
+    if (status.isPermanentlyDenied) {
+      _showPermanentlyDeniedDialog(context, 'Storage');
+      return false;
+    }
+
+    final newStatus = await Permission.storage.request();
+    if (newStatus.isGranted) return true;
+
+    if (newStatus.isPermanentlyDenied) {
+      _showPermanentlyDeniedDialog(context, 'Storage');
+    }
+    return false;
   }
 
-  /// Request video permission, mocked on desktop
+  /// Request video permission (same approach — granular then fallback)
   static Future<bool> requestVideoPermission(BuildContext context) async {
-    if (!_isMobilePlatform) {
-      _showMockPermissionInfo(
-        context: context,
-        title: 'Video Access',
-        message: 'Video access would be requested on a mobile device.',
-      );
-      return true;
+    var status = await Permission.videos.status;
+    if (status.isGranted) return true;
+
+    if (status.isPermanentlyDenied) {
+      _showPermanentlyDeniedDialog(context, 'Videos');
+      return false;
     }
-    
-    // On mobile platform this would use the permission_handler package
-    return true;
+
+    if (status.isDenied) {
+      final newStatus = await Permission.videos.request();
+      if (newStatus.isGranted) return true;
+    }
+
+    return requestStoragePermission(context);
   }
 
-  /// Request audio permission, mocked on desktop
+  /// Request audio / music files permission
   static Future<bool> requestAudioPermission(BuildContext context) async {
-    if (!_isMobilePlatform) {
-      _showMockPermissionInfo(
-        context: context,
-        title: 'Audio Access',
-        message: 'Audio access would be requested on a mobile device.',
-      );
-      return true;
+    var status = await Permission.audio.status;
+    if (status.isGranted) return true;
+
+    if (status.isPermanentlyDenied) {
+      _showPermanentlyDeniedDialog(context, 'Audio Files');
+      return false;
     }
-    
-    // On mobile platform this would use the permission_handler package
-    return true;
+
+    if (status.isDenied) {
+      final newStatus = await Permission.audio.request();
+      if (newStatus.isGranted) return true;
+    }
+
+    return requestStoragePermission(context);
   }
 
-  /// Request microphone permission, mocked on desktop
+  /// Request microphone permission
   static Future<bool> requestMicrophonePermission(BuildContext context) async {
-    if (!_isMobilePlatform) {
-      _showMockPermissionInfo(
-        context: context,
-        title: 'Microphone Access',
-        message: 'Microphone access would be requested on a mobile device.',
-      );
-      return true;
+    final status = await Permission.microphone.status;
+
+    if (status.isGranted) return true;
+
+    if (status.isPermanentlyDenied) {
+      _showPermanentlyDeniedDialog(context, 'Microphone');
+      return false;
     }
-    
-    // On mobile platform this would use the permission_handler package
-    debugPrint('PermissionService: Microphone permission requested on mobile device');
-    return true;
+
+    final newStatus = await Permission.microphone.request();
+    if (newStatus.isGranted) return true;
+
+    if (newStatus.isPermanentlyDenied) {
+      _showPermanentlyDeniedDialog(context, 'Microphone');
+    }
+    return false;
   }
 
-  /// Show a mock permission information dialog
-  static void _showMockPermissionInfo({
-    required BuildContext context,
-    required String title,
-    required String message,
-  }) {
-    // Show a non-blocking message at the bottom of the screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$title: $message'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  /// Show a permission request dialog (for mobile)
-  static void _showPermissionDialog({
-    required BuildContext context,
-    required String title,
-    required String message,
-    required String permissionType,
-    bool openSettings = false,
-  }) {
+  /// Show dialog when a permission is permanently denied (user must go to settings).
+  static void _showPermanentlyDeniedDialog(
+    BuildContext context,
+    String permissionName,
+  ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text(
+          '$permissionName Permission Required',
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Assistrend needs $permissionName access to continue. '
+          'Please grant the permission in your device settings.',
+          style: TextStyle(color: Colors.grey.shade300),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              // On mobile, this would open app settings
-              // openAppSettings(); // From permission_handler package
+              Navigator.pop(ctx);
+              openAppSettings();
             },
-            child: Text(openSettings ? 'Open Settings' : 'OK'),
+            child: const Text(
+              'Open Settings',
+              style: TextStyle(color: Colors.blue),
+            ),
           ),
         ],
       ),

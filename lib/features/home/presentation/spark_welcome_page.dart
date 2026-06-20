@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:assistrend/features/profile/providers/profile_providers.dart';
 import 'package:assistrend/features/auth/providers/auth_provider.dart';
+import 'package:assistrend/shared/utils/storage.dart';
 import 'package:assistrend/core/network/api_service.dart';
 import 'event_guidelines_page.dart';
 import 'apply_champion_page.dart';
@@ -61,13 +62,20 @@ class _SparkWelcomePageState extends ConsumerState<SparkWelcomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Read userId from Storage first (always available), fall back to authProvider.
     final authState = ref.watch(authProvider);
-    final userId = authState.userId;
+    String? userId = authState.userId ?? ref.read(authProvider).userId;
+    if (userId == null) {
+      // Try Storage as final fallback — use a sync read via FutureBuilder or
+      // just proceed; _fetchProfileAsync will handle null anyway.
+    }
     
-    // Proactively fetch profile if we have a userId but status is initial
+    // Proactively fetch profile exactly once — guard against error-state loops.
     if (userId != null && ref.read(profileProvider).status == ProfileStatus.initial) {
       Future.microtask(() {
-        ref.read(profileProvider.notifier).fetchProfile(userId);
+        if (ref.read(profileProvider).status == ProfileStatus.initial) {
+          ref.read(profileProvider.notifier).fetchProfile(userId);
+        }
       });
     }
 
@@ -100,11 +108,13 @@ class _SparkWelcomePageState extends ConsumerState<SparkWelcomePage> {
                       fontWeight: FontWeight.w700,
                     ),
                     children: [
-                      TextSpan(text: isChampion ? 'Welcome back $_displayName, to ' : 'Welcome $_displayName, to the\nnetworking '),
+                      TextSpan(text: isChampion ? 'Welcome back $_displayName, to ' : 'Welcome $_displayName, to '),
                       TextSpan(
-                        text: isChampion ? 'Champion Hub' : '"arena"',
+                        text: isChampion ? 'Champion Hub' : 'Spark',
                         style: const TextStyle(color: Color(0xFF0A69FF)),
                       ),
+                      if (!isChampion)
+                        const TextSpan(text: '\nNetworking'),
                     ],
                   ),
                 ),
